@@ -217,13 +217,11 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 const CAT={
-  nature:{l:'Natur/Wandern',c:'#27ae60',i:'\u{1F3D4}'},
-  water:{l:'Baden/Flüsse',c:'#2980b9',i:'\u{1F3CA}'},
-  city:{l:'Historische Stadt',c:'#e67e22',i:'\u{1F3DB}'},
-  waterfall:{l:'Wasserfall',c:'#8e44ad',i:'\u{1F4A7}'},
-  lake:{l:'See',c:'#16a085',i:'\u{1F30A}'},
-  transit:{l:'Transit',c:'#7f8c8d',i:'\u{1F690}'},
-  beach:{l:'Strand/Meer',c:'#f39c12',i:'\u{1F3D6}'},
+  city:{l:'Altstadt',c:'#e67e22',i:'\u{1F3DB}\u{FE0F}',mi:'\u{1F3F0}'},
+  nature:{l:'Natur',c:'#27ae60',i:'\u{1F3D4}\u{FE0F}',mi:'\u{1F332}'},
+  water:{l:'Baden',c:'#2980b9',i:'\u{1F30A}',mi:'\u{1F4A6}'},
+  beach:{l:'Strand',c:'#f39c12',i:'\u{1F3D6}\u{FE0F}',mi:'\u{2600}\u{FE0F}'},
+  transit:{l:'Transit',c:'#7f8c8d',i:'\u{1F697}',mi:'\u{1F697}'},
 };
 
 const S=[
@@ -256,10 +254,10 @@ const S=[
   {id:'valea-stan',n:'Valea lui Stan',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.35,lng:24.62,cat:'water',ni:'1',wc:1,d:'Wildes Tal bei Arefu. Kristallklare Pools, grosse Felsen, Wasserfall. Im Sommer angenehm kühl, nicht kalt.',w:'Verstecktes Juwel nahe Transfăgărășan.',t:['Pools','Wasserfall','Wild Camping']},
 
   // RO SEEN (nur warme!)
-  {id:'vidraru',n:'Vidraru-Stausee',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.35,lng:24.63,cat:'lake',ni:'1',wc:1,d:'Türkisblau, Berge drumrum. Staumauer-Parkplatz: Vans regelmässig. Im Sommer warm genug zum Baden.',w:'Freistehen am Parkplatz.',t:['Stausee','Türkis','Wild Camping']},
+  {id:'vidraru',n:'Vidraru-Stausee',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.35,lng:24.63,cat:'water',ni:'1',wc:1,d:'Türkisblau, Berge drumrum. Staumauer-Parkplatz: Vans regelmässig. Im Sommer warm genug zum Baden.',w:'Freistehen am Parkplatz.',t:['Stausee','Türkis','Wild Camping']},
 
   // RO WASSERFÄLLE
-  {id:'bigar',n:'Bigăr Wasserfall',co:'\u{1F1F7}\u{1F1F4} RO',lat:44.9883,lng:21.9272,cat:'waterfall',ni:'0.5',wc:0,d:'Moosbedeckter Wasserfall, fotogen. Umgebung (Cheile Minișului) hat Pools.',w:'30min Umweg Richtung Nera.',t:['Fotogen','Kurzer Stop']},
+  {id:'bigar',n:'Bigăr Wasserfall',co:'\u{1F1F7}\u{1F1F4} RO',lat:44.9883,lng:21.9272,cat:'water',ni:'0.5',wc:0,d:'Moosbedeckter Wasserfall, fotogen. Umgebung (Cheile Minișului) hat Pools.',w:'30min Umweg Richtung Nera.',t:['Fotogen','Kurzer Stop']},
 
   // BG STÄDTE
   {id:'veliko-tarnovo',n:'Veliko Tarnovo',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.0757,lng:25.6172,cat:'city',ni:'2',wc:0,d:'Spektakulär auf Hügeln. Tsarevets-Festung, Lichtshow. Arbanasi (3km) ruhiger zum Parken.',w:'Beeindruckendste Stadt der Route.',t:['Festung','Lichtshow','Günstig']},
@@ -284,7 +282,7 @@ const S=[
   {id:'rhodope-rivers',n:'Byala Reka (Weisser Fluss)',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.52,lng:24.93,cat:'water',ni:'1-2',wc:1,d:'Kristallklar, felsig. Strasse Madan-Rudozem folgt dem Fluss. Im Sommer angenehm warm.',w:'Unbekannte Flüsse, perfekt für euch.',t:['Kristallklar','Felsig','Wild Camping']},
 
   // BG WASSERFÄLLE
-  {id:'krushuna',n:'Krushuna-Wasserfälle',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.2422,lng:24.9139,cat:'waterfall',ni:'0.5',wc:1,d:'Kaskaden, Pools zum Abkühlen. Parkplatz-Übernachtung OK. Mit Devetashka kombinieren.',w:'Pools + Freistehen.',t:['Kaskaden','Pools','Wild Camping']},
+  {id:'krushuna',n:'Krushuna-Wasserfälle',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.2422,lng:24.9139,cat:'water',ni:'0.5',wc:1,d:'Kaskaden, Pools zum Abkühlen. Parkplatz-Übernachtung OK. Mit Devetashka kombinieren.',w:'Pools + Freistehen.',t:['Kaskaden','Pools','Wild Camping']},
 
   // GR NORDGRIECHENLAND KÜSTE (nah an Rhodopen/Ohrid)
   {id:'sithonia',n:'Sithonia (Chalkidiki)',co:'\u{1F1EC}\u{1F1F7} GR',lat:40.0833,lng:23.9667,cat:'beach',ni:'2-3',wc:1,d:'Mittlerer Finger Chalkidiki. Kavourotrypes (Orange Beach): türkises Wasser, Klippen zum Springen. Karidi Beach. Kristallklar, Pinienwälder bis zum Strand. Von Plovdiv/Rhodopen nur 3-4h. Freistehen an kleinen Buchten möglich.',w:'Schönste Strände nah an der Route. 3h von Rhodopen.',t:['Kristallklar','Klippen','Pinien','Wild Camping']},
@@ -315,7 +313,7 @@ const S=[
   {id:'vrelo-river',n:'Vrelo (kürzester Fluss)',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.96,lng:19.48,cat:'nature',ni:'0.5',wc:0,d:'~365m lang. Quelle = tiefblauer Pool. Mündet in Drina bei Perućac. Zum Schwimmen zu kalt, aber Anblick einmalig.',w:'Einmaliger Anblick, kein Badespot.',t:['Quelle','Tiefblau']},
 
   // RS WASSERFALL
-  {id:'gostilje',n:'Gostilje-Wasserfall',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.72,lng:19.72,cat:'waterfall',ni:'1',wc:1,d:'20m Wasserfall mit Pool. Đetinja-Fluss hat Badestellen. Zlatibor-Gebiet gut zum Freistehen.',w:'Wasserfall + Pool + Freistehen.',t:['Pool','Wild Camping']},
+  {id:'gostilje',n:'Gostilje-Wasserfall',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.72,lng:19.72,cat:'water',ni:'1',wc:1,d:'20m Wasserfall mit Pool. Đetinja-Fluss hat Badestellen. Zlatibor-Gebiet gut zum Freistehen.',w:'Wasserfall + Pool + Freistehen.',t:['Pool','Wild Camping']},
 
   // RS/BG GRENZE
   {id:'erma-gorge',n:'Erma-Schlucht (BG/RS)',co:'\u{1F1F7}\u{1F1F8} RS',lat:42.65,lng:22.52,cat:'water',ni:'1',wc:1,d:'Schlucht zwischen BG und RS. Grosse Felsen, Baden auf beiden Seiten. Im Sommer warm genug.',w:'Doppel-Länder-Schwimmen.',t:['Grenz-Schlucht','Wild Camping']},
@@ -765,10 +763,12 @@ function fitRoute() {
 function mkMarkerEl(cat, isSel, num) {
   const el = document.createElement('div');
   if (isSel && num!=null) {
-    el.innerHTML = `<div style="width:24px;height:24px;border-radius:50%;line-height:24px;text-align:center;background:#e94560;color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(233,69,96,.5);cursor:pointer">${num}</div>`;
+    el.innerHTML = `<div style="position:relative;cursor:pointer">
+      <span style="font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))">${CAT[cat]?.mi||'\u{1F4CD}'}</span>
+      <span style="position:absolute;top:-6px;right:-8px;width:18px;height:18px;border-radius:50%;background:#e94560;color:#fff;font-size:10px;font-weight:700;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">${num}</span>
+    </div>`;
   } else {
-    const cl=CAT[cat]?.c||'#888';
-    el.innerHTML = `<div style="width:12px;height:12px;border-radius:50%;background:${cl};border:2px solid rgba(255,255,255,.5);box-shadow:0 1px 4px ${cl};cursor:pointer"></div>`;
+    el.innerHTML = `<div style="font-size:22px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">${CAT[cat]?.mi||'\u{1F4CD}'}</div>`;
   }
   return el;
 }
