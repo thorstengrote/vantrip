@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Van-Trip Planner 2026</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #1a1a2e; color: #e0e0e0; }
@@ -87,10 +87,11 @@
   /* Map */
   #map { flex: 1; }
 
-  /* ===== POPUP ===== */
-  .leaflet-popup-content-wrapper { background: #1a1a2e !important; color: #e0e0e0 !important; border: 1px solid #0f3460 !important; border-radius: 10px !important; }
-  .leaflet-popup-tip { background: #1a1a2e !important; }
-  .leaflet-popup-content { margin: 10px !important; }
+  /* ===== POPUP (MapLibre) ===== */
+  .maplibregl-popup-content { background: #1a1a2e !important; color: #e0e0e0 !important; border: 1px solid #0f3460 !important; border-radius: 10px !important; padding: 10px !important; max-height: 70vh; overflow-y: auto; }
+  .maplibregl-popup-tip { border-top-color: #1a1a2e !important; }
+  .maplibregl-popup-close-button { color: #889; font-size: 18px; padding: 2px 6px; }
+  .maplibregl-popup { max-width: 360px !important; z-index: 5; }
 
   /* Popup carousel */
   .pcr { position: relative; width: 100%; height: 160px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; background: #0d1525; }
@@ -213,7 +214,7 @@
   <div id="lb-counter"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 const CAT={
   nature:{l:'Natur/Wandern',c:'#27ae60',i:'\u{1F3D4}'},
@@ -624,19 +625,52 @@ let markers = {};
 let rLines = [], rLegs = [], rLoading = false;
 
 // ============================================================
-// MAP
+// MAP (MapLibre GL JS — 3D terrain)
 // ============================================================
-const map = L.map('map', { center: [44, 23.5], zoom: 6 });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OSM &copy; CARTO', maxZoom: 19 }).addTo(map);
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
+  center: [23.5, 44],
+  zoom: 5.5,
+  pitch: 45,
+  maxPitch: 70,
+  bearing: 0,
+  antialias: true,
+});
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }));
+
+// Add 3D terrain when map loads
+map.on('load', () => {
+  map.addSource('terrain-dem', {
+    type: 'raster-dem',
+    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+    encoding: 'terrarium',
+    tileSize: 256,
+    maxzoom: 15,
+  });
+  map.setTerrain({ source: 'terrain-dem', exaggeration: 1.8 });
+
+  // Sky layer for nicer 3D feel
+  map.addLayer({
+    id: 'sky', type: 'sky', paint: {
+      'sky-type': 'atmosphere',
+      'sky-atmosphere-sun': [0.0, 0.0],
+      'sky-atmosphere-sun-intensity': 15,
+    }
+  });
+});
 
 // ============================================================
-// ROUTING (OSRM)
+// ROUTING (OSRM) — MapLibre version
 // ============================================================
 let rAbort = null;
 async function fetchRoute() {
   if (rAbort) rAbort.abort();
-  rLines.forEach(l => map.removeLayer(l)); rLines = []; rLegs = [];
+  // Remove old route layers
+  if (map.getLayer('route-line')) map.removeLayer('route-line');
+  if (map.getLayer('route-glow')) map.removeLayer('route-glow');
+  if (map.getSource('route')) map.removeSource('route');
+  rLegs = [];
   const spots = sel.map(id => S.find(s => s.id === id)).filter(Boolean);
   if (spots.length < 2) { renderSummary(); renderList(); return; }
   rLoading = true; renderSummary();
@@ -647,9 +681,9 @@ async function fetchRoute() {
     const d = await r.json();
     if (d.code==='Ok' && d.routes?.[0]) {
       const rt = d.routes[0];
-      const ll = rt.geometry.coordinates.map(c => [c[1], c[0]]);
-      rLines.push(L.polyline(ll, { color: '#e94560', weight: 3, opacity: .7 }).addTo(map));
-      rLines.push(L.polyline(ll, { color: '#e94560', weight: 8, opacity: .12 }).addTo(map));
+      map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: rt.geometry } });
+      map.addLayer({ id: 'route-glow', type: 'line', source: 'route', paint: { 'line-color': '#e94560', 'line-width': 8, 'line-opacity': 0.15 } });
+      map.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': '#e94560', 'line-width': 3, 'line-opacity': 0.8 } });
       rt.legs?.forEach((l, i) => rLegs.push({ from: sel[i], to: sel[i+1], km: Math.round(l.distance/1000), min: Math.round(l.duration/60) }));
     }
   } catch(e) {}
@@ -720,13 +754,23 @@ function smartInsert(id) {
   sel = ['bonn', ...inner, 'bonn'];
 }
 function hav(a,b,c,d) { const R=6371,dLa=(c-a)*Math.PI/180,dLo=(d-b)*Math.PI/180; const x=Math.sin(dLa/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLo/2)**2; return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
-function fitRoute() { const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean); if(pts.length) map.fitBounds(L.latLngBounds(pts.map(s=>[s.lat,s.lng])),{padding:[40,40]}); }
+function fitRoute() {
+  const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean);
+  if(!pts.length) return;
+  const lngs=pts.map(s=>s.lng), lats=pts.map(s=>s.lat);
+  map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],{padding:40,duration:1000});
+}
 
 // ============================================================
-function mkIcon(cat, isSel, num) {
-  if (isSel && num!=null) return L.divIcon({className:'',html:`<div style="width:22px;height:22px;border-radius:50%;line-height:22px;text-align:center;background:#e94560;color:#fff;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 0 6px #e94560">${num}</div>`,iconSize:[22,22],iconAnchor:[11,11]});
-  const cl=CAT[cat]?.c||'#888';
-  return L.divIcon({className:'',html:`<div style="width:10px;height:10px;border-radius:50%;background:${cl};border:2px solid rgba(255,255,255,.4);box-shadow:0 0 4px ${cl}"></div>`,iconSize:[10,10],iconAnchor:[5,5]});
+function mkMarkerEl(cat, isSel, num) {
+  const el = document.createElement('div');
+  if (isSel && num!=null) {
+    el.innerHTML = `<div style="width:24px;height:24px;border-radius:50%;line-height:24px;text-align:center;background:#e94560;color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(233,69,96,.5);cursor:pointer">${num}</div>`;
+  } else {
+    const cl=CAT[cat]?.c||'#888';
+    el.innerHTML = `<div style="width:12px;height:12px;border-radius:50%;background:${cl};border:2px solid rgba(255,255,255,.5);box-shadow:0 1px 4px ${cl};cursor:pointer"></div>`;
+  }
+  return el;
 }
 
 function isSel(id) { return sel.includes(id); }
@@ -827,7 +871,9 @@ function loadRoute(idx) {
 function previewRoute(idx) {
   const ids = ROUTES[idx].ids;
   const pts = ids.map(id => S.find(s=>s.id===id)).filter(Boolean);
-  if (pts.length) map.fitBounds(L.latLngBounds(pts.map(s=>[s.lat,s.lng])),{padding:[40,40]});
+  if (!pts.length) return;
+  const lngs=pts.map(s=>s.lng), lats=pts.map(s=>s.lat);
+  map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],{padding:40,duration:1000});
 }
 function updCounts() { document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:''; document.getElementById('n-all').textContent=`(${S.length})`; }
 
@@ -932,7 +978,7 @@ function renderList() {
 }
 
 function renderMarkers() {
-  Object.values(markers).forEach(m=>map.removeLayer(m)); markers={};
+  Object.values(markers).forEach(m=>m.remove()); markers={};
   const wc=document.getElementById('wc-chk').checked;
   const foodOnly=document.getElementById('food-chk').checked;
   S.forEach(s => {
@@ -941,7 +987,12 @@ function renderMarkers() {
     if (foodOnly && !FOOD[s.id]) return;
     const on = isSel(s.id);
     const ri = on ? sel.indexOf(s.id) : null;
-    const m = L.marker([s.lat,s.lng],{icon:mkIcon(s.cat,on,ri!=null?ri+1:null),zIndexOffset:on?1000:0}).addTo(map);
+    const el = mkMarkerEl(s.cat, on, ri!=null?ri+1:null);
+
+    const m = new maplibregl.Marker({element: el})
+      .setLngLat([s.lng, s.lat])
+      .addTo(map);
+
     const wcLine = s.wc ? '<div class="pwc">\u2705 Wild Camping möglich</div>' : '';
     const food = FOOD[s.id];
     const foodHtml = food ? `<div class="pfood"><div class="pfood-title">\u{1F37D} ${food.title}</div><div class="pfood-text">${food.text}</div></div>` : '';
@@ -952,7 +1003,9 @@ function renderMarkers() {
       <a class="pgmap-btn primary" href="https://www.google.com/maps/search/${gq}/@${s.lat},${s.lng},15z" target="_blank">\u{1F4F7} Google Fotos</a>
       <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation</a>
     </div>`;
-    m.bindPopup(`
+
+    const popup = new maplibregl.Popup({maxWidth:'360px',offset:15,closeButton:true})
+      .setHTML(`
       ${popupCarousel(s.id)}
       <div class="ptitle">${CAT[s.cat]?.i||''} ${s.n}</div>
       <div class="pcat">${s.co} · ${CAT[s.cat]?.l} · ${s.ni} Nächte empfohlen</div>
@@ -964,7 +1017,8 @@ function renderMarkers() {
       ${gmapEmbed}
       ${gmapBtns}
       <button class="pbtn ${on?'pbtn-rm':'pbtn-add'}" onclick="toggle('${s.id}');renderMarkers()" style="margin-top:4px;width:100%">${on?'\u2715 Von Route entfernen':'\u2713 Zur Route hinzufügen'}</button>
-    `, {maxWidth:360, minWidth:300});
+    `);
+    m.setPopup(popup);
     markers[s.id] = m;
   });
 }
@@ -979,7 +1033,7 @@ function renderSummary() {
   document.getElementById('s-ni').textContent=pts.length?`~${Math.round(ni)}`:'-';
 }
 
-function flyTo(id) { const s=S.find(x=>x.id===id); if(s){map.flyTo([s.lat,s.lng],10,{duration:.8}); markers[id]?.openPopup();} }
+function flyTo(id) { const s=S.find(x=>x.id===id); if(s){map.flyTo({center:[s.lng,s.lat],zoom:11,duration:1200,pitch:50}); setTimeout(()=>markers[id]?.togglePopup(),1300);} }
 function exportRoute() {
   const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean);
   if(!pts.length) return alert('Erst Spots auswählen!');
