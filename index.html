@@ -113,13 +113,10 @@
   .pbtn { padding: 4px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 10px; }
   .pbtn-add { background: #e94560; color: #fff; }
   .pbtn-rm { background: #333; color: #aaa; }
-  .pgmap { width: 100%; height: 180px; border: none; border-radius: 6px; margin-bottom: 4px; }
-  .pgmap-btns { display: flex; gap: 4px; margin-bottom: 6px; }
+  .pgmap-btns { display: flex; gap: 4px; margin-bottom: 4px; }
   .pgmap-btn { flex: 1; padding: 5px; border: 1px solid #333; border-radius: 5px; background: #1a1a2e; color: #aab; font-size: 9px; cursor: pointer; text-align: center; text-decoration: none; display: block; }
   .pgmap-btn:hover { border-color: #e94560; color: #e94560; }
-  .pgmap-btn.primary { background: #2a5fb5; border-color: #2a5fb5; color: #fff; }
-  .pgmap-btn.primary:hover { background: #1a4fa5; }
-  .pcr { position: relative; width: 100%; height: 130px; border-radius: 6px; overflow: hidden; margin-bottom: 4px; background: #0d1525; }
+  .pcr { position: relative; width: 100%; height: 200px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; background: #0d1525; }
 
   /* ===== LIGHTBOX ===== */
   #lightbox { display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.92); align-items: center; justify-content: center; flex-direction: column; }
@@ -420,62 +417,98 @@ const WK={
 // ============================================================
 // Cache: { spotId: [url1, url2, ...] }
 // Force refresh: clear old cache to trigger new multi-source fetch
-const IMG_VERSION = 'v4';
+const IMG_VERSION = 'v5';
 const imgCache = JSON.parse(localStorage.getItem('vt-imgs-'+IMG_VERSION) || '{}');
 
-// Multi-language Wikipedia — extract ALL images from articles (not just thumbnail)
-const WIKI_LANGS = ['en','de','ro','bg','sr','fr'];
-async function fetchWikipediaImages() {
-  // Pass 1: page thumbnails from all languages
-  for (const lang of WIKI_LANGS) {
-    const titles = [...new Set(Object.values(WK))];
-    for (let i = 0; i < titles.length; i += 50) {
-      const batch = titles.slice(i, i + 50).map(t => encodeURIComponent(t)).join('|');
-      try {
-        const r = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&titles=${batch}&prop=pageimages&format=json&pithumbsize=800&origin=*&redirects=1`);
-        const d = await r.json();
-        if (!d.query?.pages) continue;
-        for (const p of Object.values(d.query.pages)) {
-          if (!p.thumbnail?.source) continue;
-          for (const [sid, wt] of Object.entries(WK)) {
-            if (p.title.replace(/_/g,' ').toLowerCase() === wt.toLowerCase()) {
-              if (!imgCache[sid]) imgCache[sid] = [];
-              if (!imgCache[sid].includes(p.thumbnail.source)) imgCache[sid].push(p.thumbnail.source);
+// ============================================================
+// SOURCE 1: OPENVERSE (best quality — Flickr CC + Wikimedia + more)
+// ============================================================
+async function fetchOpenverse(spots, queries) {
+  for (let i = 0; i < spots.length; i += 2) {
+    await Promise.all(spots.slice(i, i + 2).map(async s => {
+      if ((imgCache[s.id]?.length || 0) >= 10) return;
+      const terms = queries?.[s.id] || [s.n.replace(/\s*\(.*?\)/g,'').trim()];
+      for (const q of terms) {
+        if ((imgCache[s.id]?.length || 0) >= 10) break;
+        try {
+          const r = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&page_size=12&license_type=all&mature=false`);
+          const d = await r.json();
+          if (!d.results) continue;
+          if (!imgCache[s.id]) imgCache[s.id] = [];
+          for (const img of d.results) {
+            if ((imgCache[s.id]?.length || 0) >= 12) break;
+            // Prefer thumbnail (faster) or fall back to url
+            const url = img.thumbnail || img.url;
+            if (url && !imgCache[s.id].includes(url) && !/logo|icon|flag|map|diagram/i.test(img.title||'')) {
+              imgCache[s.id].push(url);
             }
           }
-        }
-      } catch(e) {}
-    }
+        } catch(e) {}
+      }
+    }));
+    // Rate limit: Openverse allows 100 req/day anon, be careful
+    await new Promise(r => setTimeout(r, 200));
   }
+}
 
-  // Pass 2: extract ALL images from EN Wikipedia articles
+// Openverse search terms per spot (multiple queries = more diverse results)
+const OV_QUERIES = {
+  'sibiu':['Sibiu old town','Sibiu Romania Piata Mare'],
+  'brasov':['Brasov old town','Black Church Brasov','Tampa mountain Brasov'],
+  'sighisoara':['Sighisoara citadel','Sighisoara clock tower'],
+  'cheile-nerei':['Cheile Nerei','Nera Gorge Romania','Ochiul Beiului lake'],
+  'transfagarasan':['Transfagarasan road','Transfagarasan mountain'],
+  'plovdiv':['Plovdiv old town','Plovdiv Roman theatre','Plovdiv Bulgaria'],
+  'veliko-tarnovo':['Veliko Tarnovo','Tsarevets fortress'],
+  'rhodope':['Rhodope mountains Bulgaria','Western Rhodopes'],
+  'trigrad-gorge':['Trigrad gorge Bulgaria','Devils Throat cave Trigrad'],
+  'mogilitsa-arda':['Arda river Rhodopes','Arda river swimming Bulgaria'],
+  'belogradchik':['Belogradchik rocks','Belogradchik fortress Bulgaria'],
+  'ohrid':['Ohrid lake','Ohrid old town','Church Saint John Kaneo Ohrid'],
+  'mavrovo':['Mavrovo lake','Mavrovo submerged church','Mavrovo National Park'],
+  'tara-serbia':['Tara National Park Serbia','Banjska Stena viewpoint','Drina canyon Tara'],
+  'drina-bajina':['Drina river','House on the Drina','Drina emerald water'],
+  'uvac-canyon':['Uvac meanders Serbia','Uvac canyon','Uvac river'],
+  'golubac':['Golubac fortress','Djerdap gorge','Iron Gates Danube'],
+  'cerna-valley':['Baile Herculane','Cerna valley Romania'],
+  'retezat':['Retezat National Park','Retezat mountains lake'],
+  'sithonia':['Sithonia Chalkidiki','Kavourotrypes beach','Orange Beach Greece'],
+  'thassos':['Thassos marble beach','Thassos island Greece','Giola Thassos'],
+  'olympus-coast':['Platamonas castle Greece','Olympus beach'],
+  'ulcinj':['Ulcinj Montenegro','Velika Plaza Ulcinj'],
+  'porto-palermo':['Himare Albania beach','Porto Palermo castle','Albanian Riviera'],
+  'devetashka':['Devetashka cave Bulgaria','Devetashka light'],
+  'krushuna':['Krushuna waterfalls Bulgaria'],
+  'pirin':['Pirin mountains Bulgaria','Pirin National Park'],
+  'melnik':['Melnik Bulgaria pyramids','Melnik wine town'],
+  'shiroka-laka':['Shiroka Laka village Bulgaria'],
+  'koprivshtitsa':['Koprivshtitsa Bulgaria','Koprivshtitsa houses'],
+  'vidraru':['Vidraru dam Romania','Vidraru lake'],
+  'padis':['Padis plateau Romania','Apuseni mountains caves'],
+  'novi-sad':['Novi Sad Petrovaradin','Novi Sad Danube'],
+  'belgrade':['Belgrade Kalemegdan','Belgrade fortress Danube'],
+  'nis':['Nis fortress Serbia','Nis Serbia'],
+  'alba-iulia':['Alba Iulia fortress','Alba Carolina citadel'],
+};
+
+// ============================================================
+// SOURCE 2: WIKIMEDIA (fallback for gaps)
+// ============================================================
+async function fetchWikipediaImages() {
   const titles = [...new Set(Object.values(WK))];
-  for (let i = 0; i < titles.length; i += 10) {
-    const batch = titles.slice(i, i + 10).map(t => encodeURIComponent(t)).join('|');
+  for (let i = 0; i < titles.length; i += 50) {
+    const batch = titles.slice(i, i + 50).map(t => encodeURIComponent(t)).join('|');
     try {
-      const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${batch}&prop=images&format=json&imlimit=20&origin=*&redirects=1`);
+      const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${batch}&prop=pageimages&format=json&pithumbsize=800&origin=*&redirects=1`);
       const d = await r.json();
       if (!d.query?.pages) continue;
       for (const p of Object.values(d.query.pages)) {
-        if (!p.images) continue;
-        const sid = Object.entries(WK).find(([_,wt]) => p.title.replace(/_/g,' ').toLowerCase() === wt.toLowerCase())?.[0];
-        if (!sid) continue;
-        // Get URLs for article images (filter out icons/logos)
-        const imgFiles = p.images
-          .map(im => im.title)
-          .filter(t => /\.(jpg|jpeg|png)$/i.test(t) && !/logo|icon|flag|coat|map|commons|wiki|symbol/i.test(t))
-          .slice(0, 8);
-        for (const file of imgFiles) {
-          try {
-            const r2 = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(file)}&prop=imageinfo&iiprop=url|size&iiurlwidth=800&format=json&origin=*`);
-            const d2 = await r2.json();
-            const pg = Object.values(d2.query?.pages||{})[0];
-            if (pg?.imageinfo?.[0]?.thumburl && pg.imageinfo[0].width > 400) {
-              if (!imgCache[sid]) imgCache[sid] = [];
-              const url = pg.imageinfo[0].thumburl;
-              if (!imgCache[sid].includes(url)) imgCache[sid].push(url);
-            }
-          } catch(e) {}
+        if (!p.thumbnail?.source) continue;
+        for (const [sid, wt] of Object.entries(WK)) {
+          if (p.title.replace(/_/g,' ').toLowerCase() === wt.toLowerCase()) {
+            if (!imgCache[sid]) imgCache[sid] = [];
+            if (!imgCache[sid].includes(p.thumbnail.source)) imgCache[sid].push(p.thumbnail.source);
+          }
         }
       }
     } catch(e) {}
@@ -1031,20 +1064,13 @@ function renderMarkers() {
     const food = FOOD[s.id];
     const foodHtml = food ? `<div class="pfood"><div class="pfood-title">\u{1F37D} ${food.title}</div><div class="pfood-text">${food.text}</div></div>` : '';
     const tagsHtml = s.t.map(t => `<span style="display:inline-block;font-size:9px;padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.06);color:#889;margin:1px 2px">${t}</span>`).join('');
-    const gq = encodeURIComponent(s.n.replace(/\s*\(.*?\)/g,'').trim());
-    const gmapEmbed = `<iframe class="pgmap" src="https://maps.google.com/maps?q=${gq}&t=k&z=14&ie=UTF8&iwloc=&output=embed" loading="lazy"></iframe>`;
-    const gmapBtns = `<div class="pgmap-btns">
-      <a class="pgmap-btn primary" href="https://www.google.com/maps/search/${gq}/@${s.lat},${s.lng},15z" target="_blank">\u{1F4F7} Google Fotos</a>
-      <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation</a>
+    const navBtn = `<div class="pgmap-btns">
+      <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation starten</a>
     </div>`;
 
-    const hasImgs = getImgs(s.id).length > 0;
-    const carousel = hasImgs ? popupCarousel(s.id) : '';
     const popup = new maplibregl.Popup({maxWidth:'370px',offset:15,closeButton:true})
       .setHTML(`
-      ${gmapEmbed}
-      ${gmapBtns}
-      ${carousel}
+      ${popupCarousel(s.id)}
       <div class="ptitle">${CAT[s.cat]?.i||''} ${s.n}</div>
       <div class="pcat">${s.co} · ${CAT[s.cat]?.l} · ${s.ni} Nächte empfohlen</div>
       <div class="pdesc">${s.d}</div>
@@ -1052,7 +1078,8 @@ function renderMarkers() {
       ${wcLine}
       ${foodHtml}
       <div style="margin:4px 0">${tagsHtml}</div>
-      <button class="pbtn ${on?'pbtn-rm':'pbtn-add'}" onclick="toggle('${s.id}');renderMarkers()" style="margin-top:6px;width:100%">${on?'\u2715 Von Route entfernen':'\u2713 Zur Route hinzufügen'}</button>
+      ${navBtn}
+      <button class="pbtn ${on?'pbtn-rm':'pbtn-add'}" onclick="toggle('${s.id}');renderMarkers()" style="margin-top:4px;width:100%">${on?'\u2715 Von Route entfernen':'\u2713 Zur Route hinzufügen'}</button>
     `);
     m.setPopup(popup);
     markers[s.id] = m;
@@ -1083,31 +1110,43 @@ async function startImageLoad() {
   const sub = document.getElementById('hdr-sub');
   const orig = 'RO + BG + RS + MK | 3 Wochen';
 
-  sub.textContent = 'Bilder: Wikipedia (6 Sprachen)...';
-  await fetchWikipediaImages(); save();
-
-  sub.textContent = 'Bilder: Commons Kategorien...';
-  await fetchCommonsCategories(); save();
-
-  sub.textContent = 'Bilder: Geo-Suche...';
-  await fetchCommonsGeo(S, 15000, 20); save();
-
-  const thin = S.filter(s => (imgCache[s.id]?.length || 0) < 4);
-  if (thin.length) {
-    sub.textContent = `Bilder: Textsuche (${thin.length} Spots)...`;
-    await fetchCommonsSearch(thin); save();
+  // Already cached? Just show count
+  const cached = S.reduce((a,s) => a + (imgCache[s.id]?.length||0), 0);
+  if (cached > 100) {
+    const ok = S.filter(s => imgCache[s.id]?.length).length;
+    sub.textContent = `${orig} \u00b7 ${cached} Fotos / ${ok} Spots`;
+    return; // all cached, skip fetch
   }
 
-  const thin2 = S.filter(s => (imgCache[s.id]?.length || 0) < 2);
-  if (thin2.length) {
-    sub.textContent = `Bilder: erweitert (${thin2.length} Spots)...`;
-    await fetchCommonsGeo(thin2, 25000, 20); save();
-    await fetchCommonsSearch(thin2); save();
+  // 1. Openverse (best quality, Flickr CC + more)
+  sub.textContent = 'Fotos laden: Openverse...';
+  await fetchOpenverse(S, OV_QUERIES); save();
+
+  // 2. Wikipedia thumbnails for gaps
+  const gaps1 = S.filter(s => (imgCache[s.id]?.length||0) < 3);
+  if (gaps1.length) {
+    sub.textContent = `Fotos: Wikipedia (${gaps1.length} Lücken)...`;
+    await fetchWikipediaImages(); save();
+  }
+
+  // 3. Commons categories for remaining gaps
+  const gaps2 = S.filter(s => (imgCache[s.id]?.length||0) < 3);
+  if (gaps2.length) {
+    sub.textContent = `Fotos: Commons (${gaps2.length} Lücken)...`;
+    await fetchCommonsCategories(); save();
+    await fetchCommonsGeo(gaps2, 15000, 20); save();
+  }
+
+  // 4. Aggressive text search for anything still empty
+  const gaps3 = S.filter(s => !imgCache[s.id]?.length);
+  if (gaps3.length) {
+    sub.textContent = `Fotos: Textsuche (${gaps3.length})...`;
+    await fetchCommonsSearch(gaps3); save();
   }
 
   const total = S.reduce((a,s) => a + (imgCache[s.id]?.length||0), 0);
   const ok = S.filter(s => imgCache[s.id]?.length).length;
-  sub.textContent = `${orig} \u00b7 ${total} Fotos / ${ok} Spots + Google Maps`;
+  sub.textContent = `${orig} \u00b7 ${total} Fotos / ${ok} Spots`;
 }
 
 render();
