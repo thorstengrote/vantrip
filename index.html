@@ -94,7 +94,6 @@
   .maplibregl-popup { max-width: 360px !important; z-index: 5; }
 
   /* Popup carousel */
-  .pcr { position: relative; width: 100%; height: 160px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; background: #0d1525; }
   .pcr img { width: 100%; height: 100%; object-fit: cover; display: none; }
   .pcr img.vis { display: block; }
   .pcr-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #334; font-size: 32px; }
@@ -114,12 +113,13 @@
   .pbtn { padding: 4px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 10px; }
   .pbtn-add { background: #e94560; color: #fff; }
   .pbtn-rm { background: #333; color: #aaa; }
-  .pgmap { width: 100%; height: 120px; border: none; border-radius: 6px; margin-bottom: 6px; }
+  .pgmap { width: 100%; height: 180px; border: none; border-radius: 6px; margin-bottom: 4px; }
   .pgmap-btns { display: flex; gap: 4px; margin-bottom: 6px; }
   .pgmap-btn { flex: 1; padding: 5px; border: 1px solid #333; border-radius: 5px; background: #1a1a2e; color: #aab; font-size: 9px; cursor: pointer; text-align: center; text-decoration: none; display: block; }
   .pgmap-btn:hover { border-color: #e94560; color: #e94560; }
   .pgmap-btn.primary { background: #2a5fb5; border-color: #2a5fb5; color: #fff; }
   .pgmap-btn.primary:hover { background: #1a4fa5; }
+  .pcr { position: relative; width: 100%; height: 130px; border-radius: 6px; overflow: hidden; margin-bottom: 4px; background: #0d1525; }
 
   /* ===== LIGHTBOX ===== */
   #lightbox { display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.92); align-items: center; justify-content: center; flex-direction: column; }
@@ -420,12 +420,13 @@ const WK={
 // ============================================================
 // Cache: { spotId: [url1, url2, ...] }
 // Force refresh: clear old cache to trigger new multi-source fetch
-const IMG_VERSION = 'v3';
+const IMG_VERSION = 'v4';
 const imgCache = JSON.parse(localStorage.getItem('vt-imgs-'+IMG_VERSION) || '{}');
 
-// Multi-language Wikipedia for more diverse images
+// Multi-language Wikipedia — extract ALL images from articles (not just thumbnail)
 const WIKI_LANGS = ['en','de','ro','bg','sr','fr'];
 async function fetchWikipediaImages() {
+  // Pass 1: page thumbnails from all languages
   for (const lang of WIKI_LANGS) {
     const titles = [...new Set(Object.values(WK))];
     for (let i = 0; i < titles.length; i += 50) {
@@ -445,6 +446,39 @@ async function fetchWikipediaImages() {
         }
       } catch(e) {}
     }
+  }
+
+  // Pass 2: extract ALL images from EN Wikipedia articles
+  const titles = [...new Set(Object.values(WK))];
+  for (let i = 0; i < titles.length; i += 10) {
+    const batch = titles.slice(i, i + 10).map(t => encodeURIComponent(t)).join('|');
+    try {
+      const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${batch}&prop=images&format=json&imlimit=20&origin=*&redirects=1`);
+      const d = await r.json();
+      if (!d.query?.pages) continue;
+      for (const p of Object.values(d.query.pages)) {
+        if (!p.images) continue;
+        const sid = Object.entries(WK).find(([_,wt]) => p.title.replace(/_/g,' ').toLowerCase() === wt.toLowerCase())?.[0];
+        if (!sid) continue;
+        // Get URLs for article images (filter out icons/logos)
+        const imgFiles = p.images
+          .map(im => im.title)
+          .filter(t => /\.(jpg|jpeg|png)$/i.test(t) && !/logo|icon|flag|coat|map|commons|wiki|symbol/i.test(t))
+          .slice(0, 8);
+        for (const file of imgFiles) {
+          try {
+            const r2 = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(file)}&prop=imageinfo&iiprop=url|size&iiurlwidth=800&format=json&origin=*`);
+            const d2 = await r2.json();
+            const pg = Object.values(d2.query?.pages||{})[0];
+            if (pg?.imageinfo?.[0]?.thumburl && pg.imageinfo[0].width > 400) {
+              if (!imgCache[sid]) imgCache[sid] = [];
+              const url = pg.imageinfo[0].thumburl;
+              if (!imgCache[sid].includes(url)) imgCache[sid].push(url);
+            }
+          } catch(e) {}
+        }
+      }
+    } catch(e) {}
   }
 }
 
@@ -1004,9 +1038,13 @@ function renderMarkers() {
       <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation</a>
     </div>`;
 
-    const popup = new maplibregl.Popup({maxWidth:'360px',offset:15,closeButton:true})
+    const hasImgs = getImgs(s.id).length > 0;
+    const carousel = hasImgs ? popupCarousel(s.id) : '';
+    const popup = new maplibregl.Popup({maxWidth:'370px',offset:15,closeButton:true})
       .setHTML(`
-      ${popupCarousel(s.id)}
+      ${gmapEmbed}
+      ${gmapBtns}
+      ${carousel}
       <div class="ptitle">${CAT[s.cat]?.i||''} ${s.n}</div>
       <div class="pcat">${s.co} · ${CAT[s.cat]?.l} · ${s.ni} Nächte empfohlen</div>
       <div class="pdesc">${s.d}</div>
@@ -1014,9 +1052,7 @@ function renderMarkers() {
       ${wcLine}
       ${foodHtml}
       <div style="margin:4px 0">${tagsHtml}</div>
-      ${gmapEmbed}
-      ${gmapBtns}
-      <button class="pbtn ${on?'pbtn-rm':'pbtn-add'}" onclick="toggle('${s.id}');renderMarkers()" style="margin-top:4px;width:100%">${on?'\u2715 Von Route entfernen':'\u2713 Zur Route hinzufügen'}</button>
+      <button class="pbtn ${on?'pbtn-rm':'pbtn-add'}" onclick="toggle('${s.id}');renderMarkers()" style="margin-top:6px;width:100%">${on?'\u2715 Von Route entfernen':'\u2713 Zur Route hinzufügen'}</button>
     `);
     m.setPopup(popup);
     markers[s.id] = m;
