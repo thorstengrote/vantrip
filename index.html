@@ -619,58 +619,68 @@ function setTab(t) { tab=t; document.querySelectorAll('.tab').forEach(e=>e.class
 function render() { renderFilters(); renderList(); renderMarkers(); reqRoute(); updCounts(); }
 
 // ============================================================
-// 10 SUGGESTED ROUTES (research-based, realistic km + driving times)
+// 6 ROUTE SUGGESTIONS — jede eine "perfekte Route", leicht verschiedene Schwerpunkte
 // ============================================================
 const ROUTES = [
-  { name:'Balkan-Sampler', sub:'~2800km · 10 Stops · RS+MK+GR',
-    desc:'Die ausgewogene Runde: Serbien, Nordmazedonien, Griechenland. Matka Canyon + Ohrid + Olymp-Küste. Guter Mix ohne Hektik.',
-    pros:['Matka Canyon Kajak + Ohrid Klippenspringen','Griechische Küste am Olymp (2-3 Strandtage)','Meteora: ikonischster Spot Europas','Essen: Ćevapi Niš → Ohrid-Forelle → griechischer Fisch + Ouzo'],
-    ids:['budapest','belgrade','nis','matka-canyon','ohrid','olympus-coast','meteora','plovdiv','veliko-tarnovo','budapest'] },
+  { name:'Rumänien + Bulgarien Klassiker', sub:'~2800km · 10 Stops',
+    desc:'Der sichere Gewinner. Sibiu, Nera-Klamm, Transfăgărășan, dann Rhodopen + Plovdiv. Perfekter Wechsel Natur/Stadt. Kein Risiko, alles erprobt.',
+    pros:[
+      'Nera-Klamm (3 Tage): Klippenspringen in türkise Pools',
+      'Transfăgărășan: beste Passstrasse der Welt + Stâna-Käse vom Hirten',
+      'Sibiu + Plovdiv: die 2 schönsten Altstädte der Region',
+      'Rhodopen: Mogilitsa-Pools, Patatnik + Rakia in Dorf-Mehanas',
+    ],
+    ids:['budapest','sibiu','transfagarasan','cheile-nerei','cerna-valley','plovdiv','mogilitsa-arda','rhodope','veliko-tarnovo','nis'] },
 
-  { name:'Ohrid Deep Dive', sub:'~2700km · 8 Stops · MK focus',
-    desc:'Weniger Stops, dafür 5 Tage Ohrid. See, Altstadt, Galicica, Prespa. Plus Matka + Mavrovo. Die Langsamste und Günstigste.',
-    pros:['5 Tage Ohrid = lokale Geheimspots finden, nicht nur Postkarte','Galicica-Pass: wild campen mit Blick auf beide Seen','Prespa: Flamingos, leerer Strand, null Touristen','Nordmazedonien = günstigstes Land der Route'],
-    ids:['budapest','belgrade','matka-canyon','ohrid','prespa-lake','mavrovo','nis','budapest'] },
+  { name:'Rumänien + Ohrid', sub:'~2900km · 10 Stops',
+    desc:'Wie Route 1, aber statt Bulgarien-Fokus geht es nach Ohrid (Pflicht-See laut allen Quellen). 24°C warmer See + UNESCO Altstadt als südlicher Wendepunkt.',
+    pros:[
+      'Ohrid: einer der ältesten Seen Europas, Klippenspringen bei Kaneo',
+      'Matka Canyon: Kajak in Schlucht + Höhlenbesuch',
+      'Nera-Klamm + Transfăgărășan bleiben drin',
+      'Essen: Ohrid-Forelle + Tavče Gravče, 4 Pers. ~12€',
+    ],
+    ids:['budapest','sibiu','cheile-nerei','cerna-valley','nis','matka-canyon','ohrid','plovdiv','veliko-tarnovo','budapest'] },
 
-  { name:'Griechische Küste', sub:'~2900km · 10 Stops · GR+MK',
-    desc:'Maximum Strand: Sithonia (Chalkidiki) als Hauptziel + Ohrid See + Meteora. 8+ Tage am Wasser.',
-    pros:['Kavourotrypes: Klippenspringen ins türkise Wasser','Ohrid See: 24°C, Altstadt, UNESCO','Meteora: Sandsteinnadeln, Instagram-Gold','Essen: griechischer Fisch, Ouzo, Souvlaki — teurer als Balkan aber lohnt sich'],
-    ids:['budapest','belgrade','nis','ohrid','sithonia','olympus-coast','meteora','plovdiv','veliko-tarnovo','budapest'] },
+  { name:'Ohrid + Griechische Küste', sub:'~3000km · 10 Stops',
+    desc:'Wie Route 2, aber mit 2-3 Strandtagen an der Olymp-Küste oder Sithonia (Chalkidiki). Für alle die auch Meer wollen.',
+    pros:[
+      'Ohrid See + Sithonia Mittelmeer = zwei verschiedene Bade-Erlebnisse',
+      'Kavourotrypes (Orange Beach): Klippen + türkises Wasser',
+      'Meteora: schwebende Klöster, Sonnenuntergang-Pflicht',
+      'Essen: Ohrid-Fisch → griechischer Oktopus + Ouzo → Plovdiv Kapana',
+    ],
+    ids:['budapest','sibiu','cheile-nerei','nis','ohrid','sithonia','olympus-coast','meteora','plovdiv','veliko-tarnovo'] },
 
-  { name:'Adrenaline Balkans', sub:'~2800km · 10 Stops · RS+MK+XK',
-    desc:'Nur Action: Drina-Kajak, Tara-Zipline, Uvac-Boot, Matka-Kajak, Ohrid-Klippenspringen. Null Museen.',
-    pros:['Tara: Zipline über Europas tiefsten Canyon','Uvac: Boot durch Mäander mit Geiern','Matka: Kajak in Schlucht + Höhle','Rugova: Via Ferrata in Kosovo','Jeder einzelne Stop hat eine Wasser/Action-Aktivität'],
-    ids:['budapest','tara-serbia','drina-bajina','uvac-canyon','rugova-gorge','prizren','matka-canyon','ohrid','nis','budapest'] },
+  { name:'Kosovo + Ohrid + Action', sub:'~2800km · 10 Stops',
+    desc:'Wie Route 2, aber über Kosovo (Prizren + Rugova Via Ferrata). Mehr Abenteuer, unentdecktere Orte. Kosovo liegt genau auf dem Weg.',
+    pros:[
+      'Prizren: Top-5 Stadt im ganzen Balkan, extrem günstig',
+      'Rugova-Schlucht: Via Ferrata in unentdeckter Klamm',
+      'Matka Canyon + Ohrid + Prespa = 3 Wasser-Highlights',
+      'Essen: Prizren Flija (Kosovo-Spezialität), 4 Pers. ~8-12€',
+    ],
+    ids:['budapest','sibiu','cheile-nerei','nis','rugova-gorge','prizren','matka-canyon','ohrid','prespa-lake','plovdiv'] },
 
-  { name:'Entspannt (6 Stops)', sub:'~2400km · 6 Stops · RS',
-    desc:'Anti-Route: nur 6 Stops, 3-4 Nächte überall. Auspacken, ankommen, leben. Serbien-fokussiert, wenig Fahren.',
-    pros:['Unter 20h Gesamtfahrzeit','3-4 Nächte pro Spot = Ruhe und Entdecken','Tara NP + Drina = Wasser-Paradies','Serbien = günstig, gastfreundlich, null Stress'],
-    ids:['budapest','tara-serbia','drina-bajina','uvac-canyon','belgrade','nis','budapest'] },
+  { name:'Rumänien intensiv + Rhodopen', sub:'~2900km · 10 Stops',
+    desc:'Mehr Zeit in Rumänien: Salina Turda + Via Ferrata + Corvin Castle + Nera. Dann Rhodopen als Ausklang. Für Action-Liebhaber.',
+    pros:[
+      'Salina Turda: Riesenrad 120m unter der Erde',
+      '7 Scări Via Ferrata: Leitern + Zipline durch Wasserfall-Schlucht',
+      'Corvin Castle: Game-of-Thrones-Burg',
+      'Nera-Klamm + Cerna Thermalquellen + Rhodopen-Pools',
+    ],
+    ids:['budapest','salina-turda','sibiu','transfagarasan','brasov','7-scari','cheile-nerei','cerna-valley','plovdiv','rhodope'] },
 
-  { name:'Rumänien intensiv', sub:'~2900km · 10 Stops · RO focus',
-    desc:'Transfăgărășan, Nera-Klamm, Corvin Castle, Salina Turda, Via Ferrata. Die wildesten Berge und Strassen Osteuropas.',
-    pros:['Transfăgărășan: beste Passstrasse der Welt','Nera-Klamm: türkise Pools + Klippenspringen (2-3 Tage)','7 Scări Via Ferrata: Leitern + Zipline durch Wasserfall','Salina Turda: Riesenrad 120m unter der Erde','Corvin Castle: Game-of-Thrones-Burg'],
-    ids:['budapest','salina-turda','sibiu','transfagarasan','cheile-nerei','cerna-valley','corvin-castle','retezat','brasov','7-scari'] },
-
-  { name:'Bulgarien intensiv', sub:'~2800km · 9 Stops · BG focus',
-    desc:'Rhodopen Deep Dive: jedes Tal, jede Mehana. Plus Plovdiv, Veliko Tarnovo, Belogradchik.',
-    pros:['Rhodopen komplett: Trigrad + Wonderful Bridges + Mogilitsa + Yagodina','Plovdiv Kapana-Viertel: 10€/4 Personen','Belogradchik: roter Sandstein wie auf anderem Planeten','Patatnik + Rhodopen-Honig + Rakia in jeder Dorf-Mehana'],
-    ids:['budapest','belogradchik','veliko-tarnovo','devetashka','plovdiv','shiroka-laka','wonderful-bridges','trigrad-gorge','mogilitsa-arda','rhodope'] },
-
-  { name:'Serbien Heavy', sub:'~2500km · 9 Stops · RS focus',
-    desc:'12+ Tage Serbien: Tara + Drina + Uvac + Golubac/Đerdap. Das Land das alle überspringen.',
-    pros:['Uvac: spektakulärste Mäander Europas, null Touristen','Đerdap: Donau-Klamm mit 300m Wänden + Golubac Festung','Drina: smaragdgrün, grosse Felsen, "Haus auf der Drina"','Günstigstes Essen: Ćevapi-Platte 4 Pers. unter 10€'],
-    ids:['budapest','tara-serbia','drina-bajina','uvac-canyon','gostilje','golubac','sicevac','nis','belgrade','budapest'] },
-
-  { name:'Grand Loop (5 Länder)', sub:'~3000km · 12 Stops · RS+MK+XK+BG+RO',
-    desc:'Die grosse Schleife: Serbien → Kosovo → Nordmazedonien → Bulgarien → Rumänien. Maximum Abwechslung, 5 Küchen.',
-    pros:['5 Länder, 5 Küchen: Ćevapi → Tavče Gravče → Patatnik → Stâna-Käse','Prizren: Top-5 Balkan-Stadt','Ohrid + Rhodopen + Nera-Klamm in einer Route','Jeder Tag ein anderes Land-Gefühl'],
-    ids:['budapest','belgrade','nis','prizren','ohrid','plovdiv','rhodope','mogilitsa-arda','veliko-tarnovo','cheile-nerei','sibiu','budapest'] },
-
-  { name:'Hidden Gems Only', sub:'~2700km · 10 Stops · RS+MK+XK',
-    desc:'Null Touristenfallen. Uvac, Prizren, Rugova, Prespa, Matka. Orte die auf keiner Top-10-Liste stehen.',
-    pros:['Uvac: weltklasse Landschaft, null TripAdvisor','Rugova: Via Ferrata in unentdeckter Schlucht','Prespa: Flamingos, spiegelstiller See, 0 Touristen','Instagram-Content den keiner ihrer Freunde hat'],
-    ids:['budapest','tara-serbia','uvac-canyon','rugova-gorge','prizren','matka-canyon','ohrid','prespa-lake','nis','belgrade'] },
+  { name:'Grand Loop (5 Länder)', sub:'~3000km · 11 Stops',
+    desc:'Die grosse Schleife: Rumänien → Bulgarien → Kosovo → Nordmazedonien → zurück. Maximum Abwechslung. 5 Länder, 5 Küchen, nie langweilig.',
+    pros:[
+      '5 Küchen: Stâna-Käse → Patatnik → Ćevapi → Flija → Ohrid-Forelle',
+      'Nera + Rhodopen + Ohrid = die 3 besten Naturhighlights in einer Route',
+      'Prizren + Plovdiv + Sibiu = 3 völlig verschiedene Altstädte',
+      'Jeder Tag ein anderes Land-Gefühl',
+    ],
+    ids:['budapest','sibiu','cheile-nerei','plovdiv','rhodope','nis','prizren','matka-canyon','ohrid','veliko-tarnovo','budapest'] },
 ];
 
 function loadRoute(idx) {
@@ -745,7 +755,7 @@ function renderList() {
 
   // Route suggestions tab
   if (tab === 'routes') {
-    el.innerHTML = '<div style="padding:8px 14px;font-size:10px;color:#556">10 Routen ab/bis Bonn. Klick = Route laden + automatisch optimieren.</div>' +
+    el.innerHTML = '<div style="padding:8px 14px;font-size:10px;color:#556">6 optimale Routen ab/bis Bonn. Jede ist ein guter Trip.</div>' +
       ROUTES.map((r,i) => `<div class="rcard">
         <div class="rtitle">${i+1}. ${r.name}</div>
         <div class="rsub">${r.sub} · ${r.ids.length} Stops</div>
