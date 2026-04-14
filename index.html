@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Van-Trip Planner 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #1a1a2e; color: #e0e0e0; }
+
+  #sidebar {
+    width: 420px; min-width: 420px; display: flex; flex-direction: column;
+    background: #16213e; border-right: 2px solid #0f3460; overflow: hidden;
+  }
+  #sidebar-header { padding: 12px 16px; background: #0f3460; }
+  #sidebar-header h1 { font-size: 17px; color: #e94560; margin-bottom: 2px; }
+  #sidebar-header p { font-size: 10px; color: #8899aa; }
+
+  #filters { padding: 6px 14px; border-bottom: 1px solid #0f3460; display: flex; flex-wrap: wrap; gap: 3px; }
+  .fbtn { padding: 3px 7px; border: 1px solid #333; border-radius: 10px; background: #1a1a2e; color: #aaa; font-size: 10px; cursor: pointer; }
+  .fbtn.on { border-color: var(--c); color: var(--c); background: rgba(255,255,255,0.05); }
+
+  #controls { padding: 5px 14px; border-bottom: 1px solid #0f3460; display: flex; gap: 8px; align-items: center; }
+  #controls label { font-size: 10px; color: #889; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  #controls input[type=checkbox] { accent-color: #27ae60; }
+  #search { flex: 1; padding: 4px 8px; background: #1a1a2e; border: 1px solid #333; border-radius: 5px; color: #e0e0e0; font-size: 11px; outline: none; }
+  #search:focus { border-color: #e94560; }
+
+  #tabs { display: flex; border-bottom: 1px solid #0f3460; }
+  .tab { flex: 1; padding: 7px; text-align: center; cursor: pointer; font-size: 11px; color: #556; background: #16213e; }
+  .tab.on { color: #e94560; border-bottom: 2px solid #e94560; background: #1a1a3e; }
+
+  #list { flex: 1; overflow-y: auto; }
+  .card { padding: 8px 14px 8px 28px; border-bottom: 1px solid #0a1020; cursor: pointer; position: relative; display: flex; gap: 8px; align-items: flex-start; }
+  .card:hover { background: rgba(255,255,255,0.02); }
+  .card.sel { background: rgba(233,69,96,0.07); border-left: 3px solid #e94560; }
+  .card-body { flex: 1; min-width: 0; }
+  .card .nm { font-size: 12px; font-weight: 600; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .sub { font-size: 9px; color: #556; }
+  .card .ds { font-size: 10px; color: #778; margin-top: 2px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .tgs { margin-top: 3px; display: flex; gap: 2px; flex-wrap: wrap; }
+  .tg { font-size: 8px; padding: 1px 5px; border-radius: 6px; background: rgba(255,255,255,0.05); color: #778; }
+  .tg.wc { background: rgba(39,174,96,0.12); color: #27ae60; }
+  .card .rn { position: absolute; left: 5px; top: 8px; width: 15px; height: 15px; border-radius: 50%; background: #e94560; color: #fff; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .card.sel { border-left: 3px solid #e94560; }
+
+  /* Thumbnail in card */
+  .card-img { width: 64px; height: 48px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+  .card-img-ph { width: 64px; height: 48px; border-radius: 4px; background: #0d1525; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #223; font-size: 18px; }
+
+  /* Add/remove route button on card */
+  .card-route-btn {
+    position: absolute; right: 8px; bottom: 6px;
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid #444; background: #1a1a2e; color: #888;
+    font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; z-index: 2;
+  }
+  .card-route-btn:hover { border-color: #e94560; color: #e94560; background: rgba(233,69,96,0.1); }
+  .card-route-btn.on-route { background: #e94560; color: #fff; border-color: #e94560; }
+  .card-route-btn.on-route:hover { background: #c73550; }
+
+  /* Route leg */
+  .leg { padding: 2px 14px 2px 32px; background: #0a0f1a; font-size: 9px; color: #445; display: flex; align-items: center; gap: 5px; }
+  .leg b { color: #e94560; font-weight: 600; }
+
+  /* Move buttons */
+  .mvs { position: absolute; right: 8px; bottom: 4px; display: flex; gap: 1px; }
+  .mv { width: 18px; height: 18px; border: 1px solid #333; border-radius: 3px; background: #1a1a2e; color: #777; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mv:hover { color: #e94560; }
+
+  /* Summary bar */
+  #summary { padding: 8px 14px; background: #0f3460; font-size: 10px; color: #889; }
+  .stats { display: flex; gap: 12px; margin-bottom: 5px; }
+  .st .v { font-size: 14px; font-weight: 700; color: #e94560; }
+  .st .l { font-size: 8px; color: #556; }
+  .btns { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ab { padding: 4px 10px; border: none; border-radius: 5px; font-size: 10px; cursor: pointer; }
+  .ab1 { background: #e94560; color: #fff; }
+  .ab2 { background: transparent; color: #777; border: 1px solid #444; }
+
+  /* Spinner */
+  .sp { display: inline-block; width: 10px; height: 10px; border: 2px solid #333; border-top-color: #e94560; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Map */
+  #map { flex: 1; }
+
+  /* ===== POPUP ===== */
+  .leaflet-popup-content-wrapper { background: #1a1a2e !important; color: #e0e0e0 !important; border: 1px solid #0f3460 !important; border-radius: 10px !important; }
+  .leaflet-popup-tip { background: #1a1a2e !important; }
+  .leaflet-popup-content { margin: 10px !important; }
+
+  /* Popup carousel */
+  .pcr { position: relative; width: 100%; height: 160px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; background: #0d1525; }
+  .pcr img { width: 100%; height: 100%; object-fit: cover; display: none; }
+  .pcr img.vis { display: block; }
+  .pcr-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #334; font-size: 32px; }
+  .pcr-arr { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 5; }
+  .pcr-arr:hover { background: rgba(233,69,96,0.7); }
+  .pcr-l { left: 4px; }
+  .pcr-r { right: 4px; }
+  .pcr-dots { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; z-index: 5; }
+  .pcr-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+  .pcr-dot.on { background: #e94560; }
+  .pcr-cnt { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 8px; z-index: 5; }
+  .ptitle { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .pcat { font-size: 9px; color: #889; margin-bottom: 4px; }
+  .pdesc { font-size: 10px; line-height: 1.4; color: #bbb; margin-bottom: 4px; }
+  .pwhy { font-size: 9px; color: #e94560; font-style: italic; margin-bottom: 4px; }
+  .pwc { font-size: 9px; color: #27ae60; margin-bottom: 4px; }
+  .pbtn { padding: 4px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 10px; }
+  .pbtn-add { background: #e94560; color: #fff; }
+  .pbtn-rm { background: #333; color: #aaa; }
+  .pgmap { width: 100%; height: 120px; border: none; border-radius: 6px; margin-bottom: 6px; }
+  .pgmap-btns { display: flex; gap: 4px; margin-bottom: 6px; }
+  .pgmap-btn { flex: 1; padding: 5px; border: 1px solid #333; border-radius: 5px; background: #1a1a2e; color: #aab; font-size: 9px; cursor: pointer; text-align: center; text-decoration: none; display: block; }
+  .pgmap-btn:hover { border-color: #e94560; color: #e94560; }
+  .pgmap-btn.primary { background: #2a5fb5; border-color: #2a5fb5; color: #fff; }
+  .pgmap-btn.primary:hover { background: #1a4fa5; }
+
+  /* ===== LIGHTBOX ===== */
+  #lightbox { display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.92); align-items: center; justify-content: center; flex-direction: column; }
+  #lightbox.open { display: flex; }
+  #lb-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; z-index: 10001; }
+  #lb-title { color: #e94560; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  #lb-wrap { position: relative; max-width: 90vw; max-height: 70vh; display: flex; align-items: center; justify-content: center; }
+  #lb-img { max-width: 90vw; max-height: 70vh; border-radius: 8px; object-fit: contain; }
+  .lb-arr { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; }
+  .lb-arr:hover { background: rgba(233,69,96,0.5); }
+  #lb-prev { left: -50px; }
+  #lb-next { right: -50px; }
+  #lb-dots { display: flex; gap: 4px; margin-top: 12px; }
+  #lb-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; }
+  #lb-dots .dot.on { background: #e94560; }
+  #lb-counter { color: #556; font-size: 11px; margin-top: 6px; }
+
+  /* Route suggestions */
+  .rcard { padding: 10px 14px; border-bottom: 1px solid #0f3460; cursor: pointer; }
+  .rcard:hover { background: rgba(255,255,255,0.03); }
+  .rcard .rtitle { font-size: 13px; font-weight: 700; color: #e94560; margin-bottom: 3px; }
+  .rcard .rsub { font-size: 10px; color: #889; margin-bottom: 4px; }
+  .rcard .rdesc { font-size: 10px; color: #aab; line-height: 1.4; margin-bottom: 5px; }
+  .rcard .rpros { list-style: none; padding: 0; }
+  .rcard .rpros li { font-size: 9px; color: #27ae60; padding: 1px 0; }
+  .rcard .rpros li::before { content: '+ '; font-weight: 700; }
+  .rcard .rbtn { padding: 4px 10px; background: #e94560; color: #fff; border: none; border-radius: 4px; font-size: 10px; cursor: pointer; margin-top: 4px; }
+  .rcard .rbtn:hover { background: #c73550; }
+
+  /* Food info in popup */
+  .pfood { background: rgba(243,156,18,0.08); border-radius: 5px; padding: 5px 8px; margin-bottom: 5px; }
+  .pfood-title { font-size: 9px; color: #f39c12; font-weight: 600; margin-bottom: 2px; }
+  .pfood-text { font-size: 9px; color: #aab; line-height: 1.3; }
+
+  #list::-webkit-scrollbar { width: 5px; }
+  #list::-webkit-scrollbar-track { background: #16213e; }
+  #list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    body { flex-direction: column; }
+    #sidebar { width: 100%; min-width: unset; height: 50vh; }
+    #map { height: 50vh; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Van-Trip Planner 2026</h1>
+    <p id="hdr-sub">RO + BG + RS + MK | 3 Wochen</p>
+  </div>
+  <div id="filters"></div>
+  <div id="controls">
+    <label><input type="checkbox" id="wc-chk" onchange="render()"> Wild-Camping</label>
+    <label><input type="checkbox" id="food-chk" onchange="render()"> Kulinarik</label>
+    <input type="text" id="search" placeholder="Suchen..." oninput="renderList()">
+  </div>
+  <div id="tabs">
+    <div class="tab on" data-t="all" onclick="setTab('all')">Alle <span id="n-all"></span></div>
+    <div class="tab" data-t="sel" onclick="setTab('sel')">Route <span id="n-sel"></span></div>
+    <div class="tab" data-t="routes" onclick="setTab('routes')">Vorschläge</div>
+  </div>
+  <div id="list"></div>
+  <div id="summary">
+    <div class="stats">
+      <div class="st"><span class="v" id="s-n">0</span><span class="l"> Stops</span></div>
+      <div class="st"><span class="v" id="s-km">-</span><span class="l"> km</span></div>
+      <div class="st"><span class="v" id="s-h">-</span><span class="l"> Fahrzeit</span></div>
+      <div class="st"><span class="v" id="s-ni">-</span><span class="l"> Nächte</span></div>
+    </div>
+    <div class="btns">
+      <button class="ab ab1" onclick="exportRoute()">Google Maps</button>
+      <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
+      <button class="ab ab2" onclick="fitRoute()">Zeig Route</button>
+      <button class="ab ab2" onclick="clearRoute()">Leeren</button>
+    </div>
+  </div>
+</div>
+<div id="map"></div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lb-close" onclick="closeLB()">&times;</button>
+  <div id="lb-title"></div>
+  <div id="lb-wrap">
+    <button class="lb-arr" id="lb-prev" onclick="lbNav(-1)">&#8249;</button>
+    <img id="lb-img" src="">
+    <button class="lb-arr" id="lb-next" onclick="lbNav(1)">&#8250;</button>
+  </div>
+  <div id="lb-dots"></div>
+  <div id="lb-counter"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CAT={
+  nature:{l:'Natur/Wandern',c:'#27ae60',i:'\u{1F3D4}'},
+  water:{l:'Baden/Flüsse',c:'#2980b9',i:'\u{1F3CA}'},
+  city:{l:'Historische Stadt',c:'#e67e22',i:'\u{1F3DB}'},
+  waterfall:{l:'Wasserfall',c:'#8e44ad',i:'\u{1F4A7}'},
+  lake:{l:'See',c:'#16a085',i:'\u{1F30A}'},
+  transit:{l:'Transit',c:'#7f8c8d',i:'\u{1F690}'},
+  beach:{l:'Strand/Meer',c:'#f39c12',i:'\u{1F3D6}'},
+};
+
+const S=[
+  // HOME
+  {id:'bonn',n:'Bonn (Zuhause)',co:'\u{1F3E0} DE',lat:50.7374,lng:7.0982,cat:'transit',ni:'0',wc:0,d:'Start und Ziel der Reise.',w:'Immer Start- und Endpunkt.',t:['Start','Ziel']},
+  // TRANSIT
+  {id:'budapest',n:'Budapest (Transit)',co:'\u{1F1ED}\u{1F1FA} HU',lat:47.4979,lng:19.0402,cat:'transit',ni:'1',wc:0,d:'Thermalbäder, Donau-Ufer, Burgviertel.',w:'Liegt auf dem Weg.',t:['Transit','Therme']},
+
+  // RO STÄDTE
+  {id:'sibiu',n:'Sibiu (Hermannstadt)',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.7989,lng:24.1256,cat:'city',ni:'2',wc:0,d:'Schönste Altstadt Osteuropas. Piata Mare, Piata Mica, evangelische Kirche. Gutes Essen, faire Preise.',w:'Historisch stark, wenig Tourismus, günstig.',t:['Altstadt','Günstig']},
+  {id:'brasov',n:'Brașov (Kronstadt)',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.6427,lng:25.5887,cat:'city',ni:'2',wc:0,d:'Schwarze Kirche, Rathausplatz, Seilbahn Tampa. Berge direkt dahinter.',w:'Stadt + Berge.',t:['Altstadt','Berge','Seilbahn']},
+  {id:'sighisoara',n:'Sighișoara (Schäßburg)',co:'\u{1F1F7}\u{1F1F4} RO',lat:46.2197,lng:24.7918,cat:'city',ni:'1',wc:0,d:'Mittelalterliche Festungsstadt, Vlad Drăculea. Bunt, fotogen.',w:'UNESCO. Authentischste mittelalterliche Stadt.',t:['UNESCO','Mittelalter']},
+  {id:'alba-iulia',n:'Alba Iulia',co:'\u{1F1F7}\u{1F1F4} RO',lat:46.0686,lng:23.5803,cat:'city',ni:'1',wc:0,d:'Sternförmige Vauban-Festung, top restauriert. Abendbeleuchtung.',w:'Überraschend gut.',t:['Festung','Wenig bekannt']},
+  {id:'mesendorf',n:'Mesendorf (Sächsisch)',co:'\u{1F1F7}\u{1F1F4} RO',lat:46.11,lng:25.11,cat:'city',ni:'1',wc:1,d:'Sächsisches Dorf bei Sighișoara. Kirchenburg, Zeitreise. Vanlife-Geheimtipp. Feldwege zu Wiesen.',w:'Freistehen auf Wiesen ums Dorf.',t:['Kirchenburg','Wild Camping']},
+
+  // RO NATUR
+  {id:'transfagarasan',n:'Transfăgărășan',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.6038,lng:24.6155,cat:'nature',ni:'1-2',wc:1,d:'Spektakulärste Passstrasse Europas. Top Gear "schönste Strasse der Welt". Balea Cascada Parkplatz: Vans übernachten gratis.',w:'Einmaliges Van-Erlebnis.',t:['Passstrasse','Panorama','Wild Camping']},
+  {id:'piatra-craiului',n:'Piatra Craiului NP',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.5167,lng:25.2333,cat:'nature',ni:'1-2',wc:1,d:'Kalkstein-Grat nahe Brașov. Wiesen um Peștera (45.51N, 25.36E) zum Freistehen.',w:'Wildnis nah an Stadt.',t:['Wandern','Wild Camping']},
+  {id:'retezat',n:'Retezat Nationalpark',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.35,lng:22.8833,cat:'nature',ni:'2',wc:1,d:'Wildester NP Rumäniens. 80+ Gletscherseen, Bären. Gura Zlata Parkplatz = Freistehen üblich.',w:'Echte Wildnis.',t:['Gletscherseen','Wild Camping']},
+  {id:'bicaz-gorge',n:'Bicaz-Klamm',co:'\u{1F1F7}\u{1F1F4} RO',lat:46.8167,lng:25.8667,cat:'nature',ni:'1',wc:0,d:'300m Felswände, Strasse mitten durch. Roter See am Ende.',w:'Spektakulär zum Durchfahren.',t:['Schlucht','Felsen']},
+  {id:'padis',n:'Padis-Plateau (Apuseni)',co:'\u{1F1F7}\u{1F1F4} RO',lat:46.57,lng:22.72,cat:'nature',ni:'2',wc:1,d:'Hochkarst, Wiesen, Höhlen, null Massen. Off-grid. Schotter aber Van-tauglich.',w:'Echte Einsamkeit.',t:['Karst','Höhlen','Wild Camping','Einsam']},
+  {id:'scarisoara',n:'Scărișoara-Eishöhle',co:'\u{1F1F7}\u{1F1F4} RO',lat:46.4917,lng:22.8167,cat:'nature',ni:'0.5',wc:0,d:'Permanenter Eisblock (3500+ Jahre). Einzigartig in Südosteuropa. Unterirdische Eishalle bei 38°C draussen = krasser Kontrast.',w:'Krasser Kontrast: 0°C in der Höhle bei Sommerhitze.',t:['Eishöhle','Apuseni','Krass']},
+  {id:'marginimea',n:'Mărginimea Sibiului / Jina',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.64,lng:23.93,cat:'nature',ni:'1',wc:1,d:'Strasse nach Jina: Almwiesen, Panorama, flache Stellplätze. Schafhirten, sonst niemand.',w:'Wildestes Freistehen nahe Sibiu.',t:['Almwiesen','Wild Camping']},
+
+  // RO WASSER (nur warm genug zum Baden!)
+  {id:'cheile-nerei',n:'Cheile Nerei (Nera-Klamm)',co:'\u{1F1F7}\u{1F1F4} RO',lat:44.88,lng:21.85,cat:'water',ni:'2-3',wc:1,d:'TOP-SPOT. Massive weisse Kalkfelsen, türkise Pools, Wasserfall Văioaga. Klippenspringen von den Felsen! 20km ab Sasca Montana. Ochiul Beiului = surrealer türkiser See. 20-22°C.',w:'#1 Spot: Klippenspringen + türkise Pools + Wild Camping.',t:['Klippenspringen','Türkise Pools','Riesige Felsen','Wild Camping','Pflicht']},
+  {id:'olt-valley',n:'Olt-Tal (Turnu Roșu)',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.71,lng:24.30,cat:'water',ni:'1',wc:1,d:'Breite Abschnitte mit grossen flachen Felsen und Kiesbänken. Im Sommer warm genug. Bei Căineni tiefere Pools.',w:'Felsen + Baden + direkte Zufahrt.',t:['Grosse Steine','Wild Camping','Warm']},
+  {id:'jiu-valley',n:'Jiu-Klamm',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.23,lng:23.37,cat:'water',ni:'1',wc:1,d:'Massive Felsen im Flussbett. Sohodol-Seitental = klareres Wasser. Im Juli/Aug warm genug.',w:'Sohodol-Tal besonders gut.',t:['Klamm','Felsen','Wild Camping']},
+  {id:'cerna-valley',n:'Cerna-Tal / Băile Herculane',co:'\u{1F1F7}\u{1F1F4} RO',lat:44.88,lng:22.41,cat:'water',ni:'1-2',wc:1,d:'WARMES Flusswasser + natürliche Thermalquellen! Heisse Quellen direkt am Fluss. Bekannte Van-Spots.',w:'Heisse Quellen + Flussbaden. Einzigartig.',t:['Thermalquellen','Warm','Wild Camping']},
+  {id:'valea-stan',n:'Valea lui Stan',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.35,lng:24.62,cat:'water',ni:'1',wc:1,d:'Wildes Tal bei Arefu. Kristallklare Pools, grosse Felsen, Wasserfall. Im Sommer angenehm kühl, nicht kalt.',w:'Verstecktes Juwel nahe Transfăgărășan.',t:['Pools','Wasserfall','Wild Camping']},
+
+  // RO SEEN (nur warme!)
+  {id:'vidraru',n:'Vidraru-Stausee',co:'\u{1F1F7}\u{1F1F4} RO',lat:45.35,lng:24.63,cat:'lake',ni:'1',wc:1,d:'Türkisblau, Berge drumrum. Staumauer-Parkplatz: Vans regelmässig. Im Sommer warm genug zum Baden.',w:'Freistehen am Parkplatz.',t:['Stausee','Türkis','Wild Camping']},
+
+  // RO WASSERFÄLLE
+  {id:'bigar',n:'Bigăr Wasserfall',co:'\u{1F1F7}\u{1F1F4} RO',lat:44.9883,lng:21.9272,cat:'waterfall',ni:'0.5',wc:0,d:'Moosbedeckter Wasserfall, fotogen. Umgebung (Cheile Minișului) hat Pools.',w:'30min Umweg Richtung Nera.',t:['Fotogen','Kurzer Stop']},
+
+  // BG STÄDTE
+  {id:'veliko-tarnovo',n:'Veliko Tarnovo',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.0757,lng:25.6172,cat:'city',ni:'2',wc:0,d:'Spektakulär auf Hügeln. Tsarevets-Festung, Lichtshow. Arbanasi (3km) ruhiger zum Parken.',w:'Beeindruckendste Stadt der Route.',t:['Festung','Lichtshow','Günstig']},
+  {id:'plovdiv',n:'Plovdiv',co:'\u{1F1E7}\u{1F1EC} BG',lat:42.1354,lng:24.7453,cat:'city',ni:'2',wc:0,d:'6000+ Jahre. Altstadt auf drei Hügeln, Amphitheater, Kapana-Viertel. Extrem günstig.',w:'4-Personen-Essen extrem günstig.',t:['Amphitheater','Sehr günstig']},
+  {id:'koprivshtitsa',n:'Koprivshtitsa',co:'\u{1F1E7}\u{1F1EC} BG',lat:42.6375,lng:24.3542,cat:'city',ni:'1',wc:0,d:'Museumsdorf. Bunte Wiedergeburts-Architektur. Kaum Touristen.',w:'Überraschend schön.',t:['Museumsdorf','Bunt']},
+  {id:'melnik',n:'Melnik',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.5256,lng:23.3928,cat:'city',ni:'1',wc:1,d:'Kleinstes Städtchen. Sandstein-Pyramiden, Weinkeller, warmes Mikroklima.',w:'Wein + Geschichte + Wärme.',t:['Wein','Sandstein','Wild Camping']},
+  {id:'rila-monastery',n:'Rila-Kloster',co:'\u{1F1E7}\u{1F1EC} BG',lat:42.1333,lng:23.34,cat:'city',ni:'0.5',wc:1,d:'UNESCO. Fresken. Rilska-Fluss Zufahrt = besseres Freistehen als Kloster-Parkplatz.',w:'Kulturhighlight.',t:['UNESCO','Kloster','Wild Camping']},
+
+  // BG NATUR
+  {id:'rhodope',n:'Rhodopen (Zentral)',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.75,lng:24.57,cat:'nature',ni:'2-3',wc:1,d:'KERNGEBIET. Riesig, wild, dünn besiedelt. Pamporovo → Shiroka Laka → Devin → Trigrad → Arda. 1000-1500m = 25-30°C.',w:'Bestes Naturgebiet der Reise.',t:['Wild','Wild Camping','Kühl']},
+  {id:'trigrad-gorge',n:'Trigrad-Schlucht',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.6108,lng:24.3728,cat:'nature',ni:'1',wc:1,d:'300m Wände, Teufelskehle-Höhle. Schotter-Parkplatz = Vanlifers dokumentiert.',w:'Spektakulär + Freistehen.',t:['Schlucht','Höhle','Wild Camping']},
+  {id:'buinovsko',n:'Buinovsko-Schlucht',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.63,lng:24.33,cat:'nature',ni:'1',wc:1,d:'Nachbar Trigrad. Klareres Wasser, grössere Pools. Weniger besucht.',w:'Ruhigere Alternative.',t:['Pools','Wild Camping']},
+  {id:'shiroka-laka',n:'Shiroka Laka',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.7167,lng:24.56,cat:'nature',ni:'1',wc:1,d:'Schönstes Rhodopen-Dorf. Steinarchitektur. Fluss unterhalb hat Pools.',w:'Dorf + Flussbaden.',t:['Steindorf','Wild Camping']},
+  {id:'belogradchik',n:'Belogradchik-Felsen',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.6267,lng:22.6831,cat:'nature',ni:'1',wc:1,d:'Bizarre rote Sandstein-Formationen + Festung. Venetsa-Höhle Richtung = ruhige Forstwege.',w:'Perfekter Einstieg Bulgarien.',t:['Felsformationen','Wild Camping']},
+  {id:'devetashka',n:'Devetashka-Höhle',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.2333,lng:24.8833,cat:'nature',ni:'0.5',wc:1,d:'Riesige Höhle, Decke eingestürzt = episches Licht von oben. Expendables-2-Filmset. Gratis. Perfekt für Fotos/Drohne. Freistehen davor OK.',w:'Expendables-Filmset. Instagram-Gold.',t:['Höhle','Filmset','Gratis','Wild Camping']},
+  {id:'pirin',n:'Pirin-Nationalpark',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.75,lng:23.4333,cat:'nature',ni:'1-2',wc:0,d:'UNESCO. Schroffe Gipfel, alte Kiefern, Wandern ab Bansko.',w:'Wilde Berge.',t:['UNESCO','Wandern']},
+
+  // BG WASSER (warm genug!)
+  {id:'mogilitsa-arda',n:'Mogilitsa / Obere Arda',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.59,lng:24.59,cat:'water',ni:'2',wc:1,d:'TOP-BADESPOT. Riesige flache Granitfelsen, tiefe Pools, kristallklar. Arda zwischen Smoljan und Ardino. Im Sommer 22-25°C. Fast niemand.',w:'Grosse Steine + Pools + Einsamkeit.',t:['Riesige Steine','Pools','Wild Camping','Pflicht']},
+  {id:'devils-bridge',n:'Devil\'s Bridge (Ardino)',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.645,lng:25.12,cat:'water',ni:'1',wc:1,d:'Osmanische Steinbrücke. Baden unterhalb, grosse Felsen. Dokumentierter Vanlife-Stop.',w:'Geschichte + warmes Baden.',t:['Osmanisch','Wild Camping']},
+  {id:'madzharovo-arda',n:'Madzharovo / Arda',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.6347,lng:25.8611,cat:'water',ni:'1-2',wc:1,d:'Östliche Rhodopen. Gänsegeier kreisen oben. Warmes Wasser 24-26°C! Grosse Felsen.',w:'Geier + warmes Flussbaden. 26°C = warm genug zum Abhängen.',t:['Geier','26°C','Wild Camping']},
+  {id:'rhodope-rivers',n:'Byala Reka (Weisser Fluss)',co:'\u{1F1E7}\u{1F1EC} BG',lat:41.52,lng:24.93,cat:'water',ni:'1-2',wc:1,d:'Kristallklar, felsig. Strasse Madan-Rudozem folgt dem Fluss. Im Sommer angenehm warm.',w:'Unbekannte Flüsse, perfekt für euch.',t:['Kristallklar','Felsig','Wild Camping']},
+
+  // BG WASSERFÄLLE
+  {id:'krushuna',n:'Krushuna-Wasserfälle',co:'\u{1F1E7}\u{1F1EC} BG',lat:43.2422,lng:24.9139,cat:'waterfall',ni:'0.5',wc:1,d:'Kaskaden, Pools zum Abkühlen. Parkplatz-Übernachtung OK. Mit Devetashka kombinieren.',w:'Pools + Freistehen.',t:['Kaskaden','Pools','Wild Camping']},
+
+  // GR NORDGRIECHENLAND KÜSTE (nah an Rhodopen/Ohrid)
+  {id:'sithonia',n:'Sithonia (Chalkidiki)',co:'\u{1F1EC}\u{1F1F7} GR',lat:40.0833,lng:23.9667,cat:'beach',ni:'2-3',wc:1,d:'Mittlerer Finger Chalkidiki. Kavourotrypes (Orange Beach): türkises Wasser, Klippen zum Springen. Karidi Beach. Kristallklar, Pinienwälder bis zum Strand. Von Plovdiv/Rhodopen nur 3-4h. Freistehen an kleinen Buchten möglich.',w:'Schönste Strände nah an der Route. 3h von Rhodopen.',t:['Kristallklar','Klippen','Pinien','Wild Camping']},
+  {id:'thassos',n:'Thassos',co:'\u{1F1EC}\u{1F1F7} GR',lat:40.6833,lng:24.65,cat:'beach',ni:'2-3',wc:1,d:'Grüne Insel, Fähre ab Kavala (30min, von BG-Grenze 1.5h). Marble Beach (Saliara): weisser Marmorsand + türkises Wasser. Giola: natürlicher Felsenpool am Meer. Kiefernwälder. Weniger Massentourismus als Kykladen.',w:'Marble Beach + natürlicher Felsenpool. Fähre ab Kavala.',t:['Marmorstrand','Felsenpool','Fähre','Wild Camping']},
+  {id:'olympus-coast',n:'Olympus Riviera (Platamonas)',co:'\u{1F1EC}\u{1F1F7} GR',lat:40.1667,lng:22.5833,cat:'beach',ni:'1-2',wc:1,d:'Strand am Fuß des Olymp! Platamonas: Kreuzfahrer-Burg über dem Meer. Nei Pori / Panteleimonas: ruhigere Strände. Olymp-Wanderung (Gipfel nicht nötig, untere Pfade reichen). Von Ohrid ~3h.',w:'Baden + Olymp-Wanderung. Von Ohrid 3h.',t:['Olymp','Burg','Strand','Wandern']},
+
+  // ME MONTENEGRO ADRIAKÜSTE (von Ohrid erreichbar)
+  {id:'ulcinj',n:'Ulcinj / Velika Plaža',co:'\u{1F1F2}\u{1F1EA} ME',lat:41.9297,lng:19.2064,cat:'beach',ni:'2',wc:1,d:'Südlichste Stadt Montenegros. Velika Plaža: 13km langer Sandstrand! Kitesurfen. Altstadt auf Klippe über dem Meer. Von Ohrid ~3h über Albanien (Grenzübergang einfach). Deutlich günstiger als Budva/Kotor.',w:'13km Sandstrand + Altstadt. Von Ohrid 3h.',t:['13km Strand','Kitesurfen','Altstadt','Günstig']},
+  {id:'porto-palermo',n:'Himarë / Porto Palermo',co:'\u{1F1E6}\u{1F1F1} AL',lat:40.0667,lng:19.8000,cat:'beach',ni:'2',wc:1,d:'Albanische Riviera. Ihr kennt Albanien, aber vielleicht nicht diesen Abschnitt: Porto Palermo (versunkene U-Boot-Basis + Burg), Gjipe Beach (nur zu Fuß oder Boot), Himarë Strände. Türkises Wasser, noch günstig. Von Ohrid ~4h.',w:'Falls ihr Albanien-Küste noch nicht hattet. Türkis + günstig.',t:['Riviera','Türkis','Wild Camping','Günstig']},
+
+  // MK NORDMAZEDONIEN
+  {id:'ohrid',n:'Ohrid',co:'\u{1F1F2}\u{1F1F0} MK',lat:41.1231,lng:20.8016,cat:'city',ni:'2-3',wc:1,d:'UNESCO Stadt + See. Altstadt auf Hügel über kristallklarem See (einer der ältesten Europas, 300m tief). Kirchen, Festung Samuel, Strände. Westufer Richtung Albanien = ruhiger. August = trockenster Monat. Zum Schwimmen warm genug (22-24°C). Freistehen ausserhalb der Stadt am See.',w:'Stadt + See + Baden + Geschichte in einem. Viele sagen: Pflicht-Stop.',t:['UNESCO','See','Baden','Altstadt','Wild Camping','Pflicht']},
+  {id:'mavrovo',n:'Mavrovo Nationalpark',co:'\u{1F1F2}\u{1F1F0} MK',lat:41.6500,lng:20.7333,cat:'nature',ni:'1-2',wc:1,d:'Bergsee + wilde Berge. Versunkene Kirche im See (fotogen). Weniger Tourismus als Ohrid. Wandern, Mountainbike. Gute Verbindung Ohrid-Kosovo-Serbien.',w:'Wilder als Ohrid. Versunkene Kirche = Instagram-Spot.',t:['Bergsee','Wandern','Wild Camping','Versunkene Kirche']},
+
+  // RS STÄDTE
+  {id:'nis',n:'Niš',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.3209,lng:21.8958,cat:'city',ni:'1',wc:0,d:'Römische Festung, Schädelturm. Niška Banja 10km (gratis Therme).',w:'Transit + Thermalquellen.',t:['Festung','Therme']},
+  {id:'golubac',n:'Golubac / Đerdap',co:'\u{1F1F7}\u{1F1F8} RS',lat:44.66,lng:21.63,cat:'city',ni:'1',wc:1,d:'Restaurierte Mittelalter-Festung. Donau-Klamm = grösste Schlucht Europas. Kiesstrände zum Freistehen bei Donji Milanovac.',w:'Festung + Donau-Klamm.',t:['Donau-Klamm','Wild Camping']},
+  {id:'novi-sad',n:'Novi Sad',co:'\u{1F1F7}\u{1F1F8} RS',lat:45.2671,lng:19.8335,cat:'city',ni:'1',wc:1,d:'Petrovaradin-Festung. Štrand Beach Parkplatz: gratis, 15min Altstadt. Donau-Strand zum Chillen.',w:'Bester Rückweg-Stop.',t:['Festung','Donau-Strand','Wild Camping']},
+  {id:'belgrade',n:'Belgrad',co:'\u{1F1F7}\u{1F1F8} RS',lat:44.7866,lng:20.4489,cat:'city',ni:'1',wc:0,d:'Kalemegdan-Festung, Skadarlija.',w:'Grossstadt-Stop.',t:['Festung','Donau']},
+
+  // RS NATUR
+  {id:'tara-serbia',n:'Tara NP / Mitrovac',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.8917,lng:19.5583,cat:'nature',ni:'2',wc:1,d:'Dichte Wälder, Bären (scheu). Banjska Stena = Drina 1000m tiefer, Pflicht-Sonnenuntergang. Zipline + Rafting buchbar in Bajina Bašta. Mitrovac: Wiesen zum Freistehen.',w:'Bester Natur-Stop Serbien. Rafting + Zipline möglich.',t:['Aussicht','Rafting','Wild Camping']},
+  {id:'uvac-canyon',n:'Uvac Canyon',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.38,lng:19.97,cat:'nature',ni:'1',wc:1,d:'Spektakulärste Mäander Europas. Gänsegeier. Viewpoints erreichbar.',w:'Landschaftlich einmalig.',t:['Mäander','Geier','Wild Camping']},
+  {id:'sicevac',n:'Sićevačka Klisura',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.32,lng:22.05,cat:'nature',ni:'0.5',wc:0,d:'Flussschlucht 20km östlich Niš. Warmes Wasser, Schwimmen, Kajak mietbar. Felsformationen zum Klettern.',w:'Action-Stop nach Grenze BG: Kajak + Klettern.',t:['Schlucht','Kajak','Klettern']},
+
+  // RS WASSER (warm!)
+  {id:'drina-bajina',n:'Drina bei Bajina Bašta',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.97,lng:19.57,cat:'water',ni:'1-2',wc:1,d:'Smaragdgrün, grosse glatte Felsen. Klippenspringen + Kajak möglich. "Haus auf der Drina" = ikonischer Fels. Perućac: unglaublich klar. 20-23°C.',w:'Klippenspringen + Kajak + smaragdgrünes Wasser.',t:['Klippenspringen','Kajak','Smaragdgrün','Wild Camping']},
+  {id:'vrelo-river',n:'Vrelo (kürzester Fluss)',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.96,lng:19.48,cat:'nature',ni:'0.5',wc:0,d:'~365m lang. Quelle = tiefblauer Pool. Mündet in Drina bei Perućac. Zum Schwimmen zu kalt, aber Anblick einmalig.',w:'Einmaliger Anblick, kein Badespot.',t:['Quelle','Tiefblau']},
+
+  // RS WASSERFALL
+  {id:'gostilje',n:'Gostilje-Wasserfall',co:'\u{1F1F7}\u{1F1F8} RS',lat:43.72,lng:19.72,cat:'waterfall',ni:'1',wc:1,d:'20m Wasserfall mit Pool. Đetinja-Fluss hat Badestellen. Zlatibor-Gebiet gut zum Freistehen.',w:'Wasserfall + Pool + Freistehen.',t:['Pool','Wild Camping']},
+
+  // RS/BG GRENZE
+  {id:'erma-gorge',n:'Erma-Schlucht (BG/RS)',co:'\u{1F1F7}\u{1F1F8} RS',lat:42.65,lng:22.52,cat:'water',ni:'1',wc:1,d:'Schlucht zwischen BG und RS. Grosse Felsen, Baden auf beiden Seiten. Im Sommer warm genug.',w:'Doppel-Länder-Schwimmen.',t:['Grenz-Schlucht','Wild Camping']},
+];
+
+// ============================================================
+// CULINARY INFO per region/spot
+// ============================================================
+const FOOD = {
+  // ===== ROMANIA =====
+  'sibiu': {title:'Essen in Sibiu', text:'Piata Cibin Markt (morgens): Salam de Sibiu (das Original!), Käse, Honig vom Bauern. Mici am Grillstand ~2 LEI/Stk. Restaurants in Seitengassen hinter Piata Mare (NICHT auf dem Platz = Touristenaufschlag). Autoservire/Cantina = Selbstbedienungskantine, Vollgericht ~5€/Pers. Covrigărie = Brezelshop, 1-3 LEI. 4 Pers. Restaurant ~15-20€.'},
+  'brasov': {title:'Essen in Brașov', text:'Piata Astra (Markthalle): hinten bei den Milch-Ständen = beste Käse. Im Schei-Viertel (südl. Schwarze Kirche) essen: lokaler, günstiger. Sarmale + Mămăligă = Pflicht. Kürtőskalács (Baumstriezel) an Ständen auf Str. Republicii. Tagesausflug Moieciu/Fundata: Pensiuni mit Hausmannskost. 4 Pers. ~20€.'},
+  'sighisoara': {title:'Essen um Sighișoara', text:'Pensiuni (Gästehäuser) in Dörfern servieren "masă" (Essen) auch für Nicht-Gäste: einfach fragen! Tochitură (Fleischeintopf) + Mămăligă + Spiegelei. Zacuscă + frisches Brot vom Dorfladen. An Zäunen: "ouă" (Eier), "miere" (Honig), "brânză" (Käse) = anklopfen und kaufen.'},
+  'mesendorf': {title:'Sächsische Dörfer', text:'In den sächsischen Dörfern (Mesendorf, Crit, Viscri): Bauern verkaufen Telemea (Fetakäse), Urdă (Ricotta), frische Eier. Pensiuni kochen das beste Essen Rumäniens. Hausschwein, Garten, alles vom Hof. 4 Pers. ~10-12€.'},
+  'cheile-nerei': {title:'Banat-Küche', text:'Tochitura (Eintopf), Bulz (gegrillte Käse-Polenta-Kugeln). In Sasca Montana kleine Lokale mit Flussforelle. Bauern am Weg: Käse + Palincă (Pflaumenschnaps). Lângos (frittierter Teig + Käse/Sauerrahm) an Ständen. 4 Pers. ~12-15€.'},
+  'cerna-valley': {title:'Essen Băile Herculane', text:'Forelle direkt aus dem Cerna! Restaurants am Fluss. Brânza de burduf (Käse im Rindenmagen gereift, klingt wild, schmeckt super). Covrigi (Brezeln) aus Bäckereien. Gulaș bănățean (mehr Paprika als Siebenbürgen).'},
+  'transfagarasan': {title:'Stâna = Schäferhütte!', text:'An der Strasse stehen Stâni (Schäferhütten): frischer Schafskäse (Caș), Urdă, Bâlmoș (Käse-Polenta in Sahne). Einfach anhalten und fragen! Authentischstes Essen der Reise. Preis = was ihr geben wollt. Pro Tipp: Țuică (Pflaumenbrand) als Willkommensgruß nie ablehnen, nippen reicht.'},
+  'marginimea': {title:'Schäfer-Region', text:'Mărginimea Sibiului = berühmteste Schäferregion Rumäniens. An der Strasse nach Jina: Caș, Jintiță (Molke), Urdă direkt vom Hirten. 1kg Käse ~3-4€. In Jina selbst kleine Terasă (Terrassen-Restaurant) mit Blick auf die Berge.'},
+  'alba-iulia': {title:'Festungs-Essen', text:'Kürtőskalács am Festungstor. Ciorbă de perișoare (Fleischbällchen-Suppe). Plăcinte (gefüllte Fladen: Käse, Kohl, Kürbis) aus Brutării. Restaurants in der Festung überraschend günstig.'},
+  'olt-valley': {title:'Olt-Tal Proviant', text:'Entlang E81: Roadside Grătar (Grillstände) mit Mici + Bier. Wassermelonen-Stände überall (ganze Melone 10-20 RON = 2-4€). In Turnu Roșu: kleiner Dorfladen für Basics.'},
+  'jiu-valley': {title:'Bergarbeiter-Küche', text:'Petroșani-Region: deftige Cantinas (Selbstbedienung). Ciorbă de fasole (Bohnensuppe), Tochitură. In Târgu Jiu: Piața für Obst und Gemüse. Sehr günstig.'},
+  'vidraru': {title:'Argeș-Tal', text:'Am Fuß des Transfăgărășan: Forelle aus dem Argeș. Curtea de Argeș (Stadt) hat einen guten Piața-Markt. Sonnenblumenkerne + Mais vom Strassenstand.'},
+  'padis': {title:'Apuseni-Essen', text:'Arieseni/Albac-Region: Balmóș (Käse-Polenta in Schafssahne), Jinars (Hauswurst). In Pensiuni fragen: "Aveți masă?" = Haben Sie Essen? Horincă (Pflaumenbrand, stärker als Țuică). Heidelbeeren + Himbeeren im Juli/Aug wild pflücken!'},
+  'retezat': {title:'Hațeg-Region', text:'Hațeg hat kleinen Piața-Markt. Brânză de burduf aus der Region. In Gura Zlata: Proviant vorher kaufen, im Park selbst gibt es nichts.'},
+  'valea-stan': {title:'Arefu-Region', text:'Arefu-Dorf: Bauern verkaufen Käse, Eier, Honig. Kleine Terasă mit Ciorbă. Proviant für die Wanderung ins Tal mitbringen.'},
+  'bigar': {title:'Banat-Strassenstand', text:'An der Strasse zwischen Nera und Bigar: Honig-Stände (Salcâm/Akazien-Honig = mild, Flori/Wildblumen = aromatisch), Nüsse, getrocknete Pflaumen.'},
+  'scarisoara': {title:'Apuseni-Berge', text:'Padis/Arieseni-Region: siehe Padis. Auf dem Weg zur Höhle: Walderdbeeren + Heidelbeeren pflücken (Juli).'},
+
+  // ===== BULGARIA =====
+  'veliko-tarnovo': {title:'Essen in V. Tarnovo', text:'Mehana in Varusha-Viertel (östl. Tsarevets) = lokaler als Samovodska. Kavarma im Tontopf, Shopska Salata, Kebapche. Rakia davor! "Shtastlivetsa" = beliebt bei Einheimischen. Arbanasi (3km): Dorf-Mehanas noch günstiger. 4 Pers. ~12-18€.'},
+  'plovdiv': {title:'Essen in Plovdiv', text:'Pazar (Markthalle) bei Dzhumaya-Moschee: riesig, überdacht, Käse+Honig+Obst. Südlich der Maritza günstiger als Kapana. Shopska (4-6 BGN = lokal, >8 BGN = Touristenfalle). Tarator bestellen bei Hitze! Mekitsi (frittierter Teig) morgens in Bäckereien. 4 Pers. Mehana ~10-15€.'},
+  'koprivshtitsa': {title:'Essen Koprivshtitsa', text:'Bob Chorba (Bohnensuppe), Banitsa + Ayran (Joghurtgetränk) zum Frühstück. Kleine Mehanas an der Hauptstrasse. "Domashno" = hausgemacht = immer bestellen.'},
+  'melnik': {title:'Melnik Wein & Essen', text:'Melnik-Wein = berühmtester Rotwein Bulgariens (Shiroka Melnishka Loza Traube). Weinkeller: Verkostung fast gratis. Lukanka (Trockenwurst) + Sirene dazu. Rozhen-Kloster: eigene Küche mit Klosterrezepten. Feigen (August) von den Bäumen.'},
+  'rila-monastery': {title:'Rila-Kloster', text:'Kloster hat eigene Küche: einfach, günstig, authentisch. Bob Chorba + Brot. Auf der Zufahrt: Honig-Stände. Blagoevgrad (nächste Stadt): guter Pazar.'},
+  'rhodope': {title:'Rhodopen-Küche (Kern)', text:'PATATNIK = Pflicht (Kartoffel-Käse-Auflauf, Signatur-Gericht). Kachamak (Polenta mit Butter+Käse). Smilyan-Bohnen bei Smoljan = berühmte lokale Sorte. Rhodopen-Honig (Waldhonig, dunkle Farbe). Yoghurt hier ist Geburtsstätte des bulgarischen Yoghurts. In JEDEM Dorf eine Mehana. 4 Pers. ~8-12€.'},
+  'trigrad-gorge': {title:'Trigrad-Region', text:'Devin: Thermalstadt mit Mehanas. Trigrad-Dorf: 1-2 kleine Lokale, extrem authentisch. Schafskäse direkt von Hirten. Rhodopen-Kräutertee (Mursalski Chai) kaufen!'},
+  'buinovsko': {title:'Yagodina-Region', text:'Yagodina hat kleine Mehana. Smoljan (30 Min): Markthalle + Restaurants. Patatnik hier am besten.'},
+  'shiroka-laka': {title:'Shiroka Laka', text:'Bekannt für Rhodopen-Architektur UND Essen. Mehana direkt am Fluss. Patatnik + Cheverme (ganzes Lamm, bei Festen). Lokaler Yoghurt aus dem Dorfladen.'},
+  'mogilitsa-arda': {title:'Arda-Tal', text:'Smoljan: Markthalle für Proviant. Dörfer: Sirene (Schafskäse) + Kashkaval direkt vom Bauern. Forelle aus dem Fluss in Dorf-Mehanas. Strassenrand: Honig (Thymian, Lavendel, Wildblume). Glas 5-15 BGN = 3-8€.'},
+  'madzharovo-arda': {title:'Östl. Rhodopen', text:'Kardzhali: grösster Pazar der Region (Do). Madzharovo: kleines Dorf, einfache Kost. Türkischer Einfluss: Baklava, stärkerer Kaffee. Wassermelonen-Stände.'},
+  'devils-bridge': {title:'Ardino-Region', text:'Ardino hat Mehana am Marktplatz. Lokaler Honig + Kräuter. Rhodopen-Pilze im Sommer (Steinpilze). Bauern-Yoghurt an der Strasse.'},
+  'rhodope-rivers': {title:'Madan-Region', text:'Madan: kleiner Pazar. Rudozem: Grenzstadt zu Griechenland, griechischer Einfluss spürbar. Käse + Oliven.'},
+  'belogradchik': {title:'NW-Bulgarien', text:'Belogradchik: Mehanas am Felsen-Fuß. Deftige Küche: Kavarma, Kapama (Fleisch-Sauerkraut-Eintopf). Vidin (nächste Stadt): Donau-Fisch.'},
+  'devetashka': {title:'Lovech-Region', text:'Lovech: Mehanas am Osam-Fluss. Standard: Grillfleisch + Shopska. In Dörfern: Honig + Walnüsse an der Strasse. Krushuna: kleiner Imbiss am Parkplatz.'},
+  'krushuna': {title:'Wasserfall-Proviant', text:'Am Parkplatz kleiner Imbiss. Lovech (20 Min) für Einkauf. Tipp: Banitsa + Ayran als Wander-Proviant aus der Bäckerei = 2€ pro Person.'},
+  'pirin': {title:'Bansko-Essen', text:'Bansko: Mehana-Hochburg, dutzende in der Altstadt. Banski Starets (Pork in Tontopf), Kapama. Im Winter Ski-Tourismus, im Sommer ruhig + günstig. Melnik-Wein dazu.'},
+
+  // ===== SERBIA =====
+  'nis': {title:'Niš = Grillhauptstadt!', text:'Leskovac-Style Ćevapi: grösser, Rind/Schwein gemischt, schärfer. "10 u lepinji sa kajmakom" bestellen (10 Stk. im Fladenbrot + Kajmak). Gurmanska Pljeskavica = gefüllter Riesen-Hacksteak. Pekara (Bäckerei, 24h): Burek + Jogurt = 3€/Pers. Niška Pijaca für Markt. 4 Pers. Ćevapi ~10-15€.'},
+  'drina-bajina': {title:'Bajina Bašta', text:'Kafanas an der Hauptstrasse: Riblja Čorba (Fischsuppe) + gegrillte Pastrmka (Forelle) aus der Drina. Tara-Honig, Kajmak, Sušeno Meso (Trockenfleisch) am Pijaca kaufen. Saisonale Himbeeren + Heidelbeeren (Jul/Aug). 4 Pers. Kafana ~10€.'},
+  'tara-serbia': {title:'Tara/Zlatibor', text:'Zlatibor = kulinarischer Hotspot: Zlatiborski Pršut (Räucherschinken mit Buchenholz), bester Kajmak Serbiens (Berg-Kuhmilch), Čvarci (Grieben). Cicvara (Mais+Kajmak+Käse). Dunjevača (Quitten-Schnaps) + Viljamovka (Williams-Birne). Am Strassenrand: Honig, Rakija, Beeren. Direkt bei Bauern kaufen.'},
+  'uvac-canyon': {title:'Sjenica-Region', text:'Sjenica: berühmt für Sjenički Sir (Käse) + Sjenički Kajmak. Deftige Bergküche. Gegrilltes Lamm. Kafanas mit Cicvara.'},
+  'gostilje': {title:'Zlatibor-Essen', text:'Sirogojno (Ethno-Dorf): traditionelle Küche + Pršut direkt kaufen. Gostilje-Dorf: einfache Kafana. Waldbeeren sammeln an den Wegen!'},
+  'novi-sad': {title:'Essen in Novi Sad', text:'Laze Telečkog = Bohème-Gasse, Kafanas (Di-Do lokaler). Futoška Pijaca = grösster Markt. Donau-Fisch: Riblja Čorba + gegrillter Wels in Čardas (Flusslokale). Vojvodina-Spezial: Gulaš, Paprikaš (ung. Einfluss). Karadjordjeva Šnicla = gefülltes Schnitzel mit Kajmak. 4 Pers. ~15-20€.'},
+  'belgrade': {title:'Essen in Belgrad', text:'Ćevapi: "Walter" (Kult-Laden). Zeleni Venac Markt: frisches Obst, Ajvar, Kajmak. Skadarlija-Kafanas für Abend mit Livemusik. Pekara alle 100m: Burek als günstigstes Essen (2-3€/Pers). 4 Pers. Kafana ~15€.'},
+  'golubac': {title:'Donau-Fisch', text:'Riblja Čorba (Fischsuppe) = Pflicht an der Donau! Gegrillter Šaran (Karpfen), Som (Wels). Donji Milanovac: Fischrestaurants direkt am Wasser, extrem günstig. Lepenski Vir Cafe für Snack.'},
+  'sicevac': {title:'Niš-Region', text:'Siehe Niš. Nach der Schlucht: Grillstand an der Strasse Richtung Niš für Ćevapi.'},
+  'ohrid': {title:'Essen in Ohrid', text:'Ohrid-Forelle (Pastrmka Ohridska) = Pflicht, aber teuer weil geschützt. Tavče Gravče (Bohnen im Tontopf) = mazedonisches Nationalgericht, günstig überall. Shopska Salat, Kebapi. Am See: Fischrestaurants, Preise fair. Altstadt-Lokale günstiger als Promenade. 4 Pers. ~15-20€.'},
+  'mavrovo': {title:'Mavrovo-Region', text:'Mazedonische Bergküche: Tavče Gravče, Turli Tava (Gemüse-Auflauf), gegrilltes Lamm. Lokaler Käse (Bieno Sirenje). In Dörfern sehr günstig. Rakija (Lozova = Trauben) überall.'},
+  'sithonia': {title:'Chalkidiki Essen', text:'Frischer Fisch + Meeresfrüchte! Psarotavernes (Fischrestaurants) in Hafendörfern: Sardinen, Oktopus, Muscheln. Griechischer Salat + Tzatziki + Souvlaki überall. Bäckereien: Bougatsa (Vanille-Blätterteig). Ouzo + Tsipouro dazu. 4 Pers. ~20-30€ (GR teurer als BG/RS).'},
+  'thassos': {title:'Thassos Essen', text:'Thassos-Honig = berühmt (Thymian + Kiefern). Lokales Olivenöl. Fischrestaurants in Limenaria/Potos. Gegrillter Oktopus. Thassos Walnüsse. Preise fair für Griechenland. 4 Pers. ~25-30€.'},
+  'olympus-coast': {title:'Olympus-Küste', text:'Litochoro (Olymp-Dorf): Tavernas mit Bergblick. Lammkoteletts, Feta-Saganaki. Platamonas: Fischrestaurants am Hafen. Günstig für GR. 4 Pers. ~20-25€.'},
+  'ulcinj': {title:'Ulcinj Essen', text:'Fisch-Fokus: gegrillter Wolfsbarsch, Muscheln, Tintenfisch. Alte Bazaar-Gasse: kleine Restaurants. Deutlich günstiger als Budva. Burek + Jogurt als günstiger Snack. 4 Pers. ~12-18€.'},
+  'porto-palermo': {title:'Albanische Küste', text:'Meeresfrüchte extrem günstig! Himarë: gegrillter Fisch auf der Terrasse mit Meerblick, 4 Pers. ~10-15€. Frisches Obst an Strassenständen. Raki + Bier billig.'},
+  'erma-gorge': {title:'Grenz-Essen', text:'Pirot (RS): berühmt für Pirotski Kačkavalj (Hartkäse). Tran (BG): einfache Mehana. Grenzregion = Mix aus serbischer + bulgarischer Küche.'},
+};
+
+// Wikipedia title mapping for image fetching
+const WK={
+  bonn:'Bonn',budapest:'Budapest',sibiu:'Sibiu',brasov:'Brașov',
+  sighisoara:'Sighișoara','alba-iulia':'Alba Iulia',
+  transfagarasan:'Transfăgărășan','piatra-craiului':'Piatra Craiului National Park',
+  retezat:'Retezat National Park','bicaz-gorge':'Bicaz Gorge',
+  padis:'Padiș Plateau',scarisoara:'Scărișoara Cave',
+  'cheile-nerei':'Cheile Nerei-Beușnița National Park',
+  'olt-valley':'Olt (river)','jiu-valley':'Jiu Valley',
+  'cerna-valley':'Băile Herculane','valea-stan':'Transfăgărășan',
+  vidraru:'Vidraru Dam',bigar:'Bigar Cascade Falls',
+  'veliko-tarnovo':'Veliko Tarnovo',plovdiv:'Plovdiv',
+  koprivshtitsa:'Koprivshtitsa',nessebar:'Nesebar',
+  melnik:'Melnik, Bulgaria','rila-monastery':'Rila Monastery',
+  rhodope:'Rhodope Mountains','trigrad-gorge':'Trigrad Gorge',
+  'shiroka-laka':'Shiroka Laka',belogradchik:'Belogradchik Rocks',
+  devetashka:'Devetashka cave',pirin:'Pirin National Park',
+  'mogilitsa-arda':'Arda (Maritsa)','devils-bridge':"Devil's Bridge (Arda)",
+  'madzharovo-arda':'Madzharovo',krushuna:'Krushuna waterfalls',
+  'irakli-beach':'Irakli (beach)',nis:'Niš',golubac:'Golubac Fortress',
+  'novi-sad':'Novi Sad',belgrade:'Belgrade',
+  'tara-serbia':'Tara National Park (Serbia)',
+  'uvac-canyon':'Uvac',sicevac:'Sićevo Gorge',
+  'drina-bajina':'Drina','vrelo-river':'Vrelo (river)',
+  gostilje:'Gostilje','erma-gorge':'Jerma River',
+  ohrid:'Ohrid',mavrovo:'Mavrovo National Park',
+  sithonia:'Sithonia',thassos:'Thassos',
+  'olympus-coast':'Platamonas',ulcinj:'Ulcinj',
+  'porto-palermo':'Himarë',
+  'rhodope-rivers':'Madan, Bulgaria',marginimea:'Mărginimea Sibiului',
+  mesendorf:'Meșendorf','kara-dere':'Byala, Varna Province',
+  'irakli-beach':'Irakli (beach)',
+};
+
+// ============================================================
+// IMAGE SYSTEM — multi-source, multi-image, cached
+// ============================================================
+// Cache: { spotId: [url1, url2, ...] }
+// Force refresh: clear old cache to trigger new multi-source fetch
+const IMG_VERSION = 'v3';
+const imgCache = JSON.parse(localStorage.getItem('vt-imgs-'+IMG_VERSION) || '{}');
+
+// Multi-language Wikipedia for more diverse images
+const WIKI_LANGS = ['en','de','ro','bg','sr','fr'];
+async function fetchWikipediaImages() {
+  for (const lang of WIKI_LANGS) {
+    const titles = [...new Set(Object.values(WK))];
+    for (let i = 0; i < titles.length; i += 50) {
+      const batch = titles.slice(i, i + 50).map(t => encodeURIComponent(t)).join('|');
+      try {
+        const r = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&titles=${batch}&prop=pageimages&format=json&pithumbsize=800&origin=*&redirects=1`);
+        const d = await r.json();
+        if (!d.query?.pages) continue;
+        for (const p of Object.values(d.query.pages)) {
+          if (!p.thumbnail?.source) continue;
+          for (const [sid, wt] of Object.entries(WK)) {
+            if (p.title.replace(/_/g,' ').toLowerCase() === wt.toLowerCase()) {
+              if (!imgCache[sid]) imgCache[sid] = [];
+              if (!imgCache[sid].includes(p.thumbnail.source)) imgCache[sid].push(p.thumbnail.source);
+            }
+          }
+        }
+      } catch(e) {}
+    }
+  }
+}
+
+async function fetchCommonsGeo(spots, radius=15000, limit=20) {
+  for (let i = 0; i < spots.length; i += 3) {
+    await Promise.all(spots.slice(i, i + 3).map(async s => {
+      try {
+        const r = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${s.lat}|${s.lng}&ggsradius=${radius}&ggslimit=${limit}&prop=imageinfo&iiprop=url|size&iiurlwidth=800&format=json&origin=*`);
+        const d = await r.json();
+        if (!d.query?.pages) return;
+        const imgs = Object.values(d.query.pages)
+          .filter(p => p.imageinfo?.[0]?.thumburl && !/\.svg|logo|icon|map|coat|flag|diagram|chart/i.test(p.title))
+          .filter(p => { const ii=p.imageinfo[0]; return (ii.width||0)>400 && (ii.height||0)>300; }) // quality filter
+          .sort((a,b) => {
+            const ai=a.imageinfo[0], bi=b.imageinfo[0];
+            return ((bi.width>bi.height?1:0)-(ai.width>ai.height?1:0)) || (bi.width||0)-(ai.width||0);
+          });
+        if (!imgCache[s.id]) imgCache[s.id] = [];
+        for (const img of imgs.slice(0, 12)) {
+          const url = img.imageinfo[0].thumburl;
+          if (!imgCache[s.id].includes(url)) imgCache[s.id].push(url);
+        }
+      } catch(e) {}
+    }));
+  }
+}
+
+// Alternative search terms per spot for broader image discovery
+const ALT_SEARCH = {
+  'cheile-nerei':['Cheile Nerei','Nera Gorge','Ochiul Beiului','Cascada Vaioaga'],
+  'transfagarasan':['Transfagarasan','Transfăgărășan road','Balea Lake'],
+  'sibiu':['Sibiu old town','Hermannstadt','Piata Mare Sibiu'],
+  'brasov':['Brașov old town','Kronstadt','Black Church Brasov','Tampa mountain'],
+  'sighisoara':['Sighisoara','Schässburg','Clock Tower Sighisoara'],
+  'plovdiv':['Plovdiv old town','Roman theatre Plovdiv','Kapana Plovdiv'],
+  'veliko-tarnovo':['Veliko Tarnovo','Tsarevets fortress','Yantra river Tarnovo'],
+  'rhodope':['Rhodope mountains','Rodopi Bulgaria','Western Rhodopes'],
+  'trigrad-gorge':['Trigrad gorge','Devils Throat cave','Trigrad Bulgaria'],
+  'mogilitsa-arda':['Arda river Bulgaria','Mogilitsa','Rhodope river swimming'],
+  'madzharovo-arda':['Madzharovo','Arda canyon','Eastern Rhodopes vultures'],
+  'belogradchik':['Belogradchik rocks','Belogradchik fortress','Kaleto Belogradchik'],
+  'retezat':['Retezat mountains','Retezat National Park','Bucura lake'],
+  'drina-bajina':['Drina river','Bajina Basta','House on the Drina','Perucac lake'],
+  'tara-serbia':['Tara National Park Serbia','Banjska Stena','Drina canyon viewpoint'],
+  'uvac-canyon':['Uvac meanders','Uvac canyon Serbia','Uvac river'],
+  'golubac':['Golubac fortress','Djerdap gorge','Iron Gates Danube'],
+  'cerna-valley':['Baile Herculane','Cerna valley','Herculane baths'],
+  'vidraru':['Vidraru dam','Vidraru lake','Barajul Vidraru'],
+  'devils-bridge':['Devils Bridge Arda','Diavolski most','Ardino bridge Bulgaria'],
+  'melnik':['Melnik Bulgaria','Melnik pyramids','Rozhen monastery'],
+  'koprivshtitsa':['Koprivshtitsa','Bulgarian Revival architecture'],
+  'nessebar':['Nesebar','Nessebar old town','Nesebar churches'],
+  'shiroka-laka':['Shiroka Laka village','Широка лъка'],
+  'rila-monastery':['Rila Monastery','Rila monastery frescoes'],
+  'pirin':['Pirin mountains','Pirin National Park','Vihren peak'],
+  'padis':['Padis plateau','Apuseni mountains','Cetățile Ponorului'],
+  'novi-sad':['Novi Sad','Petrovaradin fortress','Danube Novi Sad'],
+  'krushuna':['Krushuna waterfalls','Krushunski vodopadi'],
+  'devetashka':['Devetashka cave','Devetashka пещера'],
+  'ohrid':['Ohrid','Lake Ohrid','Ohrid old town','Church Saint John Kaneo'],
+  'mavrovo':['Mavrovo','Mavrovo National Park','Mavrovo Lake','Submerged church Mavrovo'],
+  'sithonia':['Sithonia','Kavourotrypes beach','Orange Beach Chalkidiki','Chalkidiki beaches'],
+  'thassos':['Thassos','Marble Beach Thassos','Saliara beach','Giola Thassos'],
+  'olympus-coast':['Platamonas castle','Olympus Riviera','Nei Pori beach'],
+  'ulcinj':['Ulcinj','Velika Plaza','Long Beach Montenegro'],
+  'porto-palermo':['Himare','Porto Palermo','Albanian Riviera','Gjipe beach'],
+};
+
+async function fetchCommonsSearch(spots) {
+  for (let i = 0; i < spots.length; i += 2) {
+    await Promise.all(spots.slice(i, i + 2).map(async s => {
+      // Build multiple search queries
+      const base = s.n.replace(/\s*\(.*?\)/g,'').trim();
+      const queries = [base, ...(ALT_SEARCH[s.id] || [])];
+      for (const q of queries) {
+        if ((imgCache[s.id]?.length || 0) >= 10) break; // enough images
+        try {
+          const r = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=15&gsrnamespace=6&prop=imageinfo&iiprop=url|size&iiurlwidth=800&format=json&origin=*`);
+          const d = await r.json();
+          if (!d.query?.pages) continue;
+          const imgs = Object.values(d.query.pages)
+            .filter(p => p.imageinfo?.[0]?.thumburl && !/\.svg|logo|icon|map|coat|flag|diagram|chart/i.test(p.title))
+            .filter(p => { const ii=p.imageinfo[0]; return (ii.width||0)>400; })
+            .sort((a,b) => ((b.imageinfo[0].width>b.imageinfo[0].height?1:0)-(a.imageinfo[0].width>a.imageinfo[0].height?1:0)));
+          if (!imgCache[s.id]) imgCache[s.id] = [];
+          for (const img of imgs.slice(0, 8)) {
+            const url = img.imageinfo[0].thumburl;
+            if (!imgCache[s.id].includes(url)) imgCache[s.id].push(url);
+          }
+        } catch(e) {}
+      }
+    }));
+  }
+}
+
+// Commons CATEGORY search — categories often have 50-200 photos
+const CAT_MAP = {
+  'sibiu':'Sibiu','brasov':'Brașov','sighisoara':'Sighișoara',
+  'cheile-nerei':'Cheile Nerei-Beușnița National Park',
+  'transfagarasan':'Transfăgărășan','retezat':'Retezat National Park',
+  'veliko-tarnovo':'Veliko Tarnovo','plovdiv':'Plovdiv',
+  'belogradchik':'Belogradchik Rocks','rila-monastery':'Rila Monastery',
+  'trigrad-gorge':'Trigrad Gorge','nessebar':'Nesebar',
+  'golubac':'Golubac Fortress','novi-sad':'Novi Sad',
+  'tara-serbia':'Tara (mountain)','uvac-canyon':'Uvac',
+  'drina-bajina':'Drina','vidraru':'Vidraru Dam',
+  'pirin':'Pirin National Park','melnik':'Melnik, Bulgaria',
+  'koprivshtitsa':'Koprivshtitsa','devetashka':'Devetashka cave',
+  'belgrade':'Belgrade','budapest':'Budapest',
+};
+async function fetchCommonsCategories() {
+  const entries = Object.entries(CAT_MAP);
+  for (let i = 0; i < entries.length; i += 2) {
+    await Promise.all(entries.slice(i, i + 2).map(async ([sid, catName]) => {
+      if ((imgCache[sid]?.length || 0) >= 10) return;
+      try {
+        const r = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers&gcmtitle=Category:${encodeURIComponent(catName)}&gcmtype=file&gcmlimit=30&prop=imageinfo&iiprop=url|size&iiurlwidth=800&format=json&origin=*`);
+        const d = await r.json();
+        if (!d.query?.pages) return;
+        const imgs = Object.values(d.query.pages)
+          .filter(p => p.imageinfo?.[0]?.thumburl && !/\.svg|logo|icon|map|coat|flag|diagram/i.test(p.title))
+          .filter(p => { const ii=p.imageinfo[0]; return (ii.width||0)>400 && (ii.height||0)>300; })
+          .sort((a,b) => ((b.imageinfo[0].width>b.imageinfo[0].height?1:0)-(a.imageinfo[0].width>a.imageinfo[0].height?1:0)));
+        if (!imgCache[sid]) imgCache[sid] = [];
+        for (const img of imgs.slice(0, 10)) {
+          const url = img.imageinfo[0].thumburl;
+          if (!imgCache[sid].includes(url)) imgCache[sid].push(url);
+        }
+      } catch(e) {}
+    }));
+  }
+}
+
+// (Wikimedia loading is now handled by startImageLoad orchestrator)
+function save() { localStorage.setItem('vt-imgs-'+IMG_VERSION, JSON.stringify(imgCache)); renderMarkers(); renderList(); }
+function getImgs(id) { return imgCache[id] || []; }
+function getThumb(id) { return imgCache[id]?.[0] || null; }
+
+// ============================================================
+// LIGHTBOX
+// ============================================================
+let lbImgs=[], lbIdx=0, lbName='';
+function openLB(id) {
+  const s = S.find(x=>x.id===id);
+  if (!s) return;
+  lbImgs = getImgs(id);
+  if (!lbImgs.length) return;
+  lbIdx = 0; lbName = s.n;
+  showLB();
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLB() { document.getElementById('lightbox').classList.remove('open'); }
+function lbNav(d) { lbIdx = (lbIdx + d + lbImgs.length) % lbImgs.length; showLB(); }
+function showLB() {
+  document.getElementById('lb-title').textContent = lbName;
+  document.getElementById('lb-img').src = lbImgs[lbIdx].replace(/\/\d+px-/, '/1200px-');
+  document.getElementById('lb-counter').textContent = `${lbIdx+1} / ${lbImgs.length}`;
+  document.getElementById('lb-dots').innerHTML = lbImgs.map((_,i) =>
+    `<div class="dot ${i===lbIdx?'on':''}" onclick="lbIdx=${i};showLB()"></div>`
+  ).join('');
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key==='Escape') closeLB();
+  if (e.key==='ArrowRight') lbNav(1);
+  if (e.key==='ArrowLeft') lbNav(-1);
+});
+
+// ============================================================
+// APP STATE
+// ============================================================
+let sel = JSON.parse(localStorage.getItem('vt-sel') || '[]');
+let filt = new Set(Object.keys(CAT));
+let tab = 'all';
+let markers = {};
+let rLines = [], rLegs = [], rLoading = false;
+
+// ============================================================
+// MAP
+// ============================================================
+const map = L.map('map', { center: [44, 23.5], zoom: 6 });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM &copy; CARTO', maxZoom: 19 }).addTo(map);
+
+// ============================================================
+// ROUTING (OSRM)
+// ============================================================
+let rAbort = null;
+async function fetchRoute() {
+  if (rAbort) rAbort.abort();
+  rLines.forEach(l => map.removeLayer(l)); rLines = []; rLegs = [];
+  const spots = sel.map(id => S.find(s => s.id === id)).filter(Boolean);
+  if (spots.length < 2) { renderSummary(); renderList(); return; }
+  rLoading = true; renderSummary();
+  const ctrl = new AbortController(); rAbort = ctrl;
+  try {
+    const c = spots.map(s => `${s.lng},${s.lat}`).join(';');
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson&annotations=distance,duration`, { signal: ctrl.signal });
+    const d = await r.json();
+    if (d.code==='Ok' && d.routes?.[0]) {
+      const rt = d.routes[0];
+      const ll = rt.geometry.coordinates.map(c => [c[1], c[0]]);
+      rLines.push(L.polyline(ll, { color: '#e94560', weight: 3, opacity: .7 }).addTo(map));
+      rLines.push(L.polyline(ll, { color: '#e94560', weight: 8, opacity: .12 }).addTo(map));
+      rt.legs?.forEach((l, i) => rLegs.push({ from: sel[i], to: sel[i+1], km: Math.round(l.distance/1000), min: Math.round(l.duration/60) }));
+    }
+  } catch(e) {}
+  rLoading = false; renderSummary(); renderList();
+}
+let rTimer; function reqRoute() { clearTimeout(rTimer); rTimer = setTimeout(fetchRoute, 300); }
+
+// Ensure Bonn is always start AND end
+function ensureBonn() {
+  if (sel[0] !== 'bonn') sel = sel.filter(x=>x!=='bonn');
+  if (sel[0] !== 'bonn') sel.unshift('bonn');
+  if (sel.length > 1 && sel[sel.length-1] !== 'bonn') sel.push('bonn');
+}
+
+// Round-trip: always Bonn → ... → Bonn
+function optimizeRoute() {
+  if (sel.length < 3) return;
+  // Remove all bonn entries, we'll add them back
+  let ids = sel.filter(x => x !== 'bonn');
+  const pts = ids.map(id => S.find(s=>s.id===id)).filter(Boolean);
+  if (!pts.length) return;
+
+  const home = S.find(s=>s.id==='bonn');
+  // Start from spot nearest to Bonn
+  pts.sort((a,b) => hav(home.lat,home.lng,a.lat,a.lng) - hav(home.lat,home.lng,b.lat,b.lng));
+
+  const rem = [...pts];
+  const ord = [rem.shift()];
+  while (rem.length > 0) {
+    const last = ord[ord.length-1]; let bi=0, bd=Infinity;
+    if (rem.length === 1) { ord.push(rem.pop()); break; }
+    rem.forEach((r,i) => {
+      let d = hav(last.lat,last.lng,r.lat,r.lng);
+      // Bias last spots toward home
+      if (rem.length <= 3) d += hav(r.lat,r.lng,home.lat,home.lng) * 0.3;
+      if (d<bd){bd=d;bi=i;}
+    });
+    ord.push(rem.splice(bi,1)[0]);
+  }
+  sel = ['bonn', ...ord.map(s=>s.id), 'bonn'];
+  localStorage.setItem('vt-sel', JSON.stringify(sel)); render();
+}
+
+// Smart insert: find optimal position (skip bonn anchors)
+function smartInsert(id) {
+  if (id === 'bonn') return; // don't double-add bonn
+  // Ensure bonn bookends
+  const inner = sel.filter(x => x !== 'bonn');
+  if (inner.length < 2) {
+    inner.push(id);
+  } else {
+    const newSpot = S.find(s=>s.id===id);
+    if (!newSpot) { inner.push(id); }
+    else {
+      let bestIdx = inner.length, bestCost = Infinity;
+      for (let i = 0; i <= inner.length; i++) {
+        const prev = i > 0 ? S.find(s=>s.id===inner[i-1]) : S.find(s=>s.id==='bonn');
+        const next = i < inner.length ? S.find(s=>s.id===inner[i]) : S.find(s=>s.id==='bonn');
+        let cost = 0;
+        if (prev) cost += hav(prev.lat,prev.lng,newSpot.lat,newSpot.lng);
+        if (next) cost += hav(newSpot.lat,newSpot.lng,next.lat,next.lng);
+        if (prev && next) cost -= hav(prev.lat,prev.lng,next.lat,next.lng);
+        if (cost < bestCost) { bestCost = cost; bestIdx = i; }
+      }
+      inner.splice(bestIdx, 0, id);
+    }
+  }
+  sel = ['bonn', ...inner, 'bonn'];
+}
+function hav(a,b,c,d) { const R=6371,dLa=(c-a)*Math.PI/180,dLo=(d-b)*Math.PI/180; const x=Math.sin(dLa/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLo/2)**2; return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+function fitRoute() { const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean); if(pts.length) map.fitBounds(L.latLngBounds(pts.map(s=>[s.lat,s.lng])),{padding:[40,40]}); }
+
+// ============================================================
+function mkIcon(cat, isSel, num) {
+  if (isSel && num!=null) return L.divIcon({className:'',html:`<div style="width:22px;height:22px;border-radius:50%;line-height:22px;text-align:center;background:#e94560;color:#fff;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 0 6px #e94560">${num}</div>`,iconSize:[22,22],iconAnchor:[11,11]});
+  const cl=CAT[cat]?.c||'#888';
+  return L.divIcon({className:'',html:`<div style="width:10px;height:10px;border-radius:50%;background:${cl};border:2px solid rgba(255,255,255,.4);box-shadow:0 0 4px ${cl}"></div>`,iconSize:[10,10],iconAnchor:[5,5]});
+}
+
+function isSel(id) { return sel.includes(id); }
+function toggle(id) {
+  if (id === 'bonn') return; // bonn is always auto-managed
+  if (isSel(id)) { sel=sel.filter(x=>x!==id); }
+  else { smartInsert(id); }
+  // Ensure bonn bookends when route has spots
+  const inner = sel.filter(x=>x!=='bonn');
+  sel = inner.length ? ['bonn', ...inner, 'bonn'] : [];
+  localStorage.setItem('vt-sel',JSON.stringify(sel)); render();
+}
+function mv(id,d) { const i=sel.indexOf(id),n=i+d; if(i<0||n<0||n>=sel.length)return; [sel[i],sel[n]]=[sel[n],sel[i]]; localStorage.setItem('vt-sel',JSON.stringify(sel)); render(); }
+function clearRoute() { sel=[]; localStorage.setItem('vt-sel','[]'); render(); }
+function setTab(t) { tab=t; document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on',e.dataset.t===t)); renderList(); }
+function render() { renderFilters(); renderList(); renderMarkers(); reqRoute(); updCounts(); }
+
+// ============================================================
+// 5 SUGGESTED ROUTES
+// ============================================================
+const ROUTES = [
+  {
+    name: 'Klassiker: Rumänien + Bulgarien',
+    sub: '21 Tage · ~2600km · 10 Stops',
+    desc: 'Die ausgewogene Route. 3 Top-Altstädte, 2 Fluss-Highlights, Rhodopen, entspanntes Tempo. Max 3h Fahrt pro Etappe.',
+    pros: [
+      'Sibiu + Brașov + Plovdiv (die 3 stärksten Altstädte)',
+      'Nera-Klamm: Klippenspringen + türkise Pools',
+      'Rhodopen: Mogilitsa Granitfelsen-Pools, Dorf-Mehanas',
+      'Essen: Piata Cibin Sibiu, Stâna-Käse Transfăgărășan, Patatnik + Rakia in Rhodopen, Kapana Plovdiv 10€/4P',
+      'Realistische Fahrzeiten, keine Hektik',
+    ],
+    ids: ['budapest','sibiu','transfagarasan','cheile-nerei','cerna-valley','plovdiv','mogilitsa-arda','rhodope','veliko-tarnovo','novi-sad']
+  },
+  {
+    name: 'Mit Ohrid (Pflicht-See)',
+    sub: '21 Tage · ~2900km · 11 Stops',
+    desc: 'Wie Route 1, aber mit Ohrid als südlichem Wendepunkt. UNESCO Stadt + See + 24°C Wasser. Die Route die im ChatGPT-Thread am meisten Sinn ergab.',
+    pros: [
+      'Ohrid: einer der ältesten Seen Europas + Altstadt (2-3 Tage)',
+      'Mavrovo NP: versunkene Kirche im See',
+      'Rhodopen-Durchquerung auf dem Weg',
+      'Essen: Ohrid-Forelle + Tavče Gravče, Rhodopen-Honig, Plovdiv Kapana',
+      'Rückweg über Niš (Ćevapi-Hauptstadt)',
+    ],
+    ids: ['budapest','sibiu','cheile-nerei','plovdiv','rhodope','mogilitsa-arda','ohrid','mavrovo','nis','novi-sad']
+  },
+  {
+    name: 'Abenteuer + Drina',
+    sub: '21 Tage · ~2800km · 10 Stops',
+    desc: 'Über Serbien rein: Drina-Kajak + Tara-Rafting als Auftakt, dann Rumänien + Bulgarien. Mehr Action, weniger Stadt.',
+    pros: [
+      'Drina: Klippenspringen + Kajak, smaragdgrünes Wasser',
+      'Tara NP: Banjska Stena Sonnenuntergang + Rafting',
+      'Nera-Klamm: bestes Flussbaden der Route',
+      'Essen: Pršut + Kajmak Zlatibor, Forelle Drina, Banat-Bulz am Grill',
+      'Rhodopen zum Ausklingen',
+    ],
+    ids: ['budapest','tara-serbia','drina-bajina','cheile-nerei','cerna-valley','sibiu','plovdiv','mogilitsa-arda','rhodope','novi-sad']
+  },
+  {
+    name: 'Ohrid + Meer (Chalkidiki)',
+    sub: '21 Tage · ~3000km · 11 Stops',
+    desc: 'See + Meer: Ohrid als Wendepunkt, dann Abstecher Sithonia (Chalkidiki) für türkises Mittelmeer. Klippen-Buchten + Pinienstrände. Zwei komplett verschiedene Bade-Erlebnisse.',
+    pros: [
+      'Ohrid See: 24°C, Altstadt, UNESCO (2-3 Tage)',
+      'Sithonia: Kavourotrypes (Orange Beach), Klippenspringen',
+      'Rhodopen + Plovdiv auf dem Weg',
+      'Essen: Ohrid-Forelle, griechischer Fisch + Ouzo auf Sithonia, Kapana Plovdiv',
+      'Perfekt wenn ihr auch Meer wollt ohne weiten Umweg',
+    ],
+    ids: ['budapest','sibiu','cheile-nerei','plovdiv','rhodope','ohrid','sithonia','veliko-tarnovo','nis','novi-sad']
+  },
+  {
+    name: 'Entspannt: weniger ist mehr',
+    sub: '21 Tage · ~2200km · 8 Stops',
+    desc: 'Nur 8 Stops, dafür 2-3 Nächte überall. Kein Stress, ankommen statt durchrasen. Die Route für "wir wollen auch mal nichts machen".',
+    pros: [
+      'Max 2.5h Fahrt pro Etappe',
+      '2-3 Nächte an jedem Ort = wirklich ankommen',
+      'Sibiu + Plovdiv als Stadt-Highlights reichen',
+      'Nera-Klamm + Rhodopen: jeweils 3 Tage Zeit zum Erkunden',
+      'Essen: Zeit für Marktbesuche, Bauern finden, in Ruhe Mehanas testen',
+    ],
+    ids: ['budapest','sibiu','cheile-nerei','cerna-valley','plovdiv','rhodope','mogilitsa-arda','novi-sad']
+  },
+];
+
+function loadRoute(idx) {
+  const ids = ROUTES[idx].ids.filter(x=>x!=='bonn');
+  sel = ['bonn', ...ids, 'bonn'];
+  localStorage.setItem('vt-sel', JSON.stringify(sel));
+  optimizeRoute();
+  setTab('sel');
+  render();
+  setTimeout(fitRoute, 500);
+}
+function previewRoute(idx) {
+  const ids = ROUTES[idx].ids;
+  const pts = ids.map(id => S.find(s=>s.id===id)).filter(Boolean);
+  if (pts.length) map.fitBounds(L.latLngBounds(pts.map(s=>[s.lat,s.lng])),{padding:[40,40]});
+}
+function updCounts() { document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:''; document.getElementById('n-all').textContent=`(${S.length})`; }
+
+function renderFilters() {
+  document.getElementById('filters').innerHTML = Object.entries(CAT).map(([k,c]) =>
+    `<button class="fbtn ${filt.has(k)?'on':''}" style="--c:${c.c}" onclick="filt.has('${k}')?filt.delete('${k}'):filt.add('${k}');render()">${c.i} ${c.l}</button>`
+  ).join('');
+}
+
+function visible() {
+  const wc = document.getElementById('wc-chk').checked;
+  const foodOnly = document.getElementById('food-chk').checked;
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  let list = S.filter(s => filt.has(s.cat));
+  if (wc) list = list.filter(s => s.wc);
+  if (foodOnly) list = list.filter(s => FOOD[s.id]);
+  if (q) list = list.filter(s => s.n.toLowerCase().includes(q) || s.co.toLowerCase().includes(q) || s.d.toLowerCase().includes(q) || s.t.some(t=>t.toLowerCase().includes(q)));
+  if (tab==='sel') return sel.map(id => list.find(s=>s.id===id)).filter(Boolean);
+  return list;
+}
+
+function fmtDur(m) { const h=Math.floor(m/60); return h?`${h}h${m%60>0?' '+m%60+'m':''}`:m+'m'; }
+
+// ============================================================
+// POPUP CAROUSEL BUILDER
+// ============================================================
+function popupCarousel(id) {
+  const imgs = getImgs(id);
+  if (!imgs.length) return `<div class="pcr"><div class="pcr-ph">${CAT[S.find(s=>s.id===id)?.cat]?.i||''}</div></div>`;
+  const uid = 'cr_'+id;
+  const imgTags = imgs.map((u,i) => `<img src="${u}" class="${i===0?'vis':''}" data-i="${i}">`).join('');
+  const dots = imgs.length > 1 ? `<div class="pcr-dots">${imgs.map((_,i)=>`<div class="pcr-dot ${i===0?'on':''}" data-i="${i}"></div>`).join('')}</div>` : '';
+  const arrows = imgs.length > 1 ? `<button class="pcr-arr pcr-l" onclick="crNav('${uid}',-1)">&#8249;</button><button class="pcr-arr pcr-r" onclick="crNav('${uid}',1)">&#8250;</button>` : '';
+  const cnt = imgs.length > 1 ? `<div class="pcr-cnt">${imgs.length} Fotos</div>` : '';
+  return `<div class="pcr" id="${uid}" data-idx="0" onclick="openLB('${id}')" style="cursor:pointer">${imgTags}${arrows}${dots}${cnt}</div>`;
+}
+function crNav(uid, dir) {
+  event.stopPropagation();
+  const el = document.getElementById(uid);
+  if (!el) return;
+  const imgs = el.querySelectorAll('img');
+  const dots = el.querySelectorAll('.pcr-dot');
+  let idx = parseInt(el.dataset.idx) || 0;
+  imgs[idx]?.classList.remove('vis');
+  dots[idx]?.classList.remove('on');
+  idx = (idx + dir + imgs.length) % imgs.length;
+  imgs[idx]?.classList.add('vis');
+  dots[idx]?.classList.add('on');
+  el.dataset.idx = idx;
+}
+
+// ============================================================
+function renderList() {
+  const el = document.getElementById('list');
+
+  // Route suggestions tab
+  if (tab === 'routes') {
+    el.innerHTML = '<div style="padding:8px 14px;font-size:10px;color:#556">5 Routen ab/bis Bonn. Jede mit Kulinarik- und Abenteuer-Highlights.</div>' +
+      ROUTES.map((r,i) => `<div class="rcard">
+        <div class="rtitle">${i+1}. ${r.name}</div>
+        <div class="rsub">${r.sub} · ${r.ids.length} Stops</div>
+        <div class="rdesc">${r.desc}</div>
+        <ul class="rpros">${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul>
+        <button class="rbtn" onclick="loadRoute(${i})">Route laden</button>
+        <button class="rbtn" style="background:#333;margin-left:4px" onclick="previewRoute(${i})">Vorschau</button>
+      </div>`).join('');
+    return;
+  }
+
+  const spots = visible();
+  if (!spots.length) { el.innerHTML=`<div style="padding:30px;text-align:center;color:#445;font-size:11px">${tab==='sel'?'Keine Spots in Route.':'Keine Treffer.'}</div>`; return; }
+  let h = '';
+  spots.forEach((s,i) => {
+    const on = isSel(s.id);
+    const ri = sel.indexOf(s.id);
+    if (tab==='sel' && i>0) {
+      const leg = rLegs.find(l=>l.from===sel[ri-1]&&l.to===s.id);
+      if (leg) h += `<div class="leg"><b>${leg.km} km</b> · ${fmtDur(leg.min)}</div>`;
+      else if (rLoading) h += `<div class="leg">berechne...</div>`;
+    }
+    const thumb = getThumb(s.id);
+    const imgEl = thumb
+      ? `<img class="card-img" src="${thumb}" alt="" onerror="this.className='card-img-ph';this.innerHTML='${CAT[s.cat]?.i||''}';">`
+      : `<div class="card-img-ph">${CAT[s.cat]?.i||''}</div>`;
+    const imgCount = getImgs(s.id).length;
+    const wcTag = s.wc ? '<span class="tg wc">WC</span>' : '';
+    const foodTag = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
+    const routeBtn = s.id==='bonn' ? '' : `<button class="card-route-btn ${on?'on-route':''}" onclick="event.stopPropagation();toggle('${s.id}')" title="${on?'Von Route entfernen':'Zur Route'}">${on?'\u2713':'+'}</button>`;
+    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')">
+      ${on?`<div class="rn">${ri+1}</div>`:''}
+      <div class="card-body">
+        <div class="nm">${CAT[s.cat]?.i||''} ${s.n}</div>
+        <div class="sub">${s.co} · ${s.ni} N${imgCount>1?' · '+imgCount+' Fotos':''}</div>
+        <div class="ds">${s.d}</div>
+        <div class="tgs">${foodTag}${wcTag}${s.t.slice(0,4).map(t=>`<span class="tg">${t}</span>`).join('')}</div>
+      </div>
+      ${imgEl}
+      ${tab==='sel'&&on?`<div class="mvs" onclick="event.stopPropagation()"><button class="mv" onclick="mv('${s.id}',-1)">&#9650;</button><button class="mv" onclick="mv('${s.id}',1)">&#9660;</button></div>`:routeBtn}
+    </div>`;
+  });
+  el.innerHTML = h;
+}
+
+function renderMarkers() {
+  Object.values(markers).forEach(m=>map.removeLayer(m)); markers={};
+  const wc=document.getElementById('wc-chk').checked;
+  const foodOnly=document.getElementById('food-chk').checked;
+  S.forEach(s => {
+    if (!filt.has(s.cat)) return;
+    if (wc && !s.wc) return;
+    if (foodOnly && !FOOD[s.id]) return;
+    const on = isSel(s.id);
+    const ri = on ? sel.indexOf(s.id) : null;
+    const m = L.marker([s.lat,s.lng],{icon:mkIcon(s.cat,on,ri!=null?ri+1:null),zIndexOffset:on?1000:0}).addTo(map);
+    const wcLine = s.wc ? '<div class="pwc">\u2705 Wild Camping möglich</div>' : '';
+    const food = FOOD[s.id];
+    const foodHtml = food ? `<div class="pfood"><div class="pfood-title">\u{1F37D} ${food.title}</div><div class="pfood-text">${food.text}</div></div>` : '';
+    const tagsHtml = s.t.map(t => `<span style="display:inline-block;font-size:9px;padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.06);color:#889;margin:1px 2px">${t}</span>`).join('');
+    const gq = encodeURIComponent(s.n.replace(/\s*\(.*?\)/g,'').trim());
+    const gmapEmbed = `<iframe class="pgmap" src="https://maps.google.com/maps?q=${gq}&t=k&z=14&ie=UTF8&iwloc=&output=embed" loading="lazy"></iframe>`;
+    const gmapBtns = `<div class="pgmap-btns">
+      <a class="pgmap-btn primary" href="https://www.google.com/maps/search/${gq}/@${s.lat},${s.lng},15z" target="_blank">\u{1F4F7} Google Fotos</a>
+      <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation</a>
+    </div>`;
+    m.bindPopup(`
+      ${popupCarousel(s.id)}
+      <div class="ptitle">${CAT[s.cat]?.i||''} ${s.n}</div>
+      <div class="pcat">${s.co} · ${CAT[s.cat]?.l} · ${s.ni} Nächte empfohlen</div>
+      <div class="pdesc">${s.d}</div>
+      <div class="pwhy">${s.w}</div>
+      ${wcLine}
+      ${foodHtml}
+      <div style="margin:4px 0">${tagsHtml}</div>
+      ${gmapEmbed}
+      ${gmapBtns}
+      <button class="pbtn ${on?'pbtn-rm':'pbtn-add'}" onclick="toggle('${s.id}');renderMarkers()" style="margin-top:4px;width:100%">${on?'\u2715 Von Route entfernen':'\u2713 Zur Route hinzufügen'}</button>
+    `, {maxWidth:360, minWidth:300});
+    markers[s.id] = m;
+  });
+}
+
+function renderSummary() {
+  const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean);
+  document.getElementById('s-n').textContent=pts.length;
+  if (rLoading) { document.getElementById('s-km').innerHTML='<span class="sp"></span>'; document.getElementById('s-h').innerHTML='<span class="sp"></span>'; }
+  else if (rLegs.length) { document.getElementById('s-km').textContent=rLegs.reduce((a,l)=>a+l.km,0).toLocaleString('de'); document.getElementById('s-h').textContent=fmtDur(rLegs.reduce((a,l)=>a+l.min,0)); }
+  else { document.getElementById('s-km').textContent='-'; document.getElementById('s-h').textContent='-'; }
+  let ni=0; pts.forEach(s=>{const p=s.ni.toString().split('-');ni+=parseFloat(p[p.length-1])||1;});
+  document.getElementById('s-ni').textContent=pts.length?`~${Math.round(ni)}`:'-';
+}
+
+function flyTo(id) { const s=S.find(x=>x.id===id); if(s){map.flyTo([s.lat,s.lng],10,{duration:.8}); markers[id]?.openPopup();} }
+function exportRoute() {
+  const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean);
+  if(!pts.length) return alert('Erst Spots auswählen!');
+  window.open('https://www.google.com/maps/dir/'+pts.map(s=>`${s.lat},${s.lng}`).join('/'),'_blank');
+}
+
+// ============================================================
+// IMAGE LOAD ORCHESTRATOR (Wikimedia multi-source)
+// ============================================================
+async function startImageLoad() {
+  const sub = document.getElementById('hdr-sub');
+  const orig = 'RO + BG + RS + MK | 3 Wochen';
+
+  sub.textContent = 'Bilder: Wikipedia (6 Sprachen)...';
+  await fetchWikipediaImages(); save();
+
+  sub.textContent = 'Bilder: Commons Kategorien...';
+  await fetchCommonsCategories(); save();
+
+  sub.textContent = 'Bilder: Geo-Suche...';
+  await fetchCommonsGeo(S, 15000, 20); save();
+
+  const thin = S.filter(s => (imgCache[s.id]?.length || 0) < 4);
+  if (thin.length) {
+    sub.textContent = `Bilder: Textsuche (${thin.length} Spots)...`;
+    await fetchCommonsSearch(thin); save();
+  }
+
+  const thin2 = S.filter(s => (imgCache[s.id]?.length || 0) < 2);
+  if (thin2.length) {
+    sub.textContent = `Bilder: erweitert (${thin2.length} Spots)...`;
+    await fetchCommonsGeo(thin2, 25000, 20); save();
+    await fetchCommonsSearch(thin2); save();
+  }
+
+  const total = S.reduce((a,s) => a + (imgCache[s.id]?.length||0), 0);
+  const ok = S.filter(s => imgCache[s.id]?.length).length;
+  sub.textContent = `${orig} \u00b7 ${total} Fotos / ${ok} Spots + Google Maps`;
+}
+
+render();
+startImageLoad();
+</script>
+</body>
+</html>
