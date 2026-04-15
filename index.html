@@ -540,7 +540,21 @@ async function fetchRoute() {
       // Collect all speeds from all legs
       const allSpeeds = [];
       rt.legs?.forEach((l, i) => {
-        rLegs.push({ from: sel[i], to: sel[i+1], km: Math.round(l.distance/1000), min: Math.round(l.duration/60) });
+        // Calculate road type breakdown per leg
+        const legSpeeds = l.annotation?.speed || [];
+        const legDists = l.annotation?.distance || [];
+        const breakdown = {};
+        ROAD_TYPES.forEach(rt => breakdown[rt.id] = 0);
+        for (let j = 0; j < legSpeeds.length; j++) {
+          const t = roadType(legSpeeds[j]);
+          breakdown[t.id] += legDists[j] || 0;
+        }
+        const totalDist = Object.values(breakdown).reduce((a,b) => a+b, 0) || 1;
+        const pcts = {};
+        ROAD_TYPES.forEach(rt => pcts[rt.id] = Math.round(breakdown[rt.id] / totalDist * 100));
+        // Avg speed
+        const avgSpeed = l.distance && l.duration ? Math.round(l.distance / l.duration * 3.6) : 0;
+        rLegs.push({ from: sel[i], to: sel[i+1], km: Math.round(l.distance/1000), min: Math.round(l.duration/60), pcts, avgSpeed });
         if (l.annotation?.speed) allSpeeds.push(...l.annotation.speed);
       });
 
@@ -867,7 +881,16 @@ function renderList() {
     const ri = sel.indexOf(s.id);
     if (tab==='sel' && i>0) {
       const leg = rLegs.find(l=>l.from===sel[ri-1]&&l.to===s.id);
-      if (leg) h += `<div class="leg"><b>${leg.km} km</b> · ${fmtDur(leg.min)}</div>`;
+      if (leg) {
+        const bar = leg.pcts ? ROAD_TYPES.filter(rt=>leg.pcts[rt.id]>0).map(rt=>
+          `<div style="width:${Math.max(leg.pcts[rt.id],3)}%;height:6px;background:${rt.color};border-radius:1px" title="${rt.label}: ${leg.pcts[rt.id]}%"></div>`
+        ).join('') : '';
+        const speedInfo = leg.avgSpeed ? ` · \u00d8 ${leg.avgSpeed} km/h` : '';
+        h += `<div class="leg" style="flex-direction:column;align-items:stretch;padding:4px 14px 4px 32px;gap:2px">
+          <div style="display:flex;align-items:center;gap:5px"><b>${leg.km} km</b> · ${fmtDur(leg.min)}${speedInfo}</div>
+          <div style="display:flex;width:100%;border-radius:3px;overflow:hidden;gap:1px">${bar}</div>
+        </div>`;
+      }
       else if (rLoading) h += `<div class="leg">berechne...</div>`;
     }
     const thumb = getThumb(s.id);
