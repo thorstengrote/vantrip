@@ -192,6 +192,12 @@
       <div class="st"><span class="v" id="s-h">-</span><span class="l"> Fahrzeit</span></div>
       <div class="st"><span class="v" id="s-ni">-</span><span class="l"> Nächte</span></div>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+      <span style="font-size:8px;color:#2ecc71">\u2501 Autobahn</span>
+      <span style="font-size:8px;color:#3498db">\u2501 Schnellstr.</span>
+      <span style="font-size:8px;color:#e67e22">\u2501 Bergstr.</span>
+      <span style="font-size:8px;color:#e74c3c">\u2501 Langsam</span>
+    </div>
     <div class="btns">
       <button class="ab ab1" onclick="exportRoute()">Google Maps</button>
       <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
@@ -496,13 +502,28 @@ map.on('load', () => {
 // ============================================================
 // ROUTING (OSRM) — MapLibre version
 // ============================================================
+// Road type colors based on speed (OSRM annotation)
+const ROAD_TYPES = [
+  { id: 'highway',  min: 25, color: '#2ecc71', width: 4, label: 'Autobahn' },      // >90 km/h
+  { id: 'main',     min: 17, color: '#3498db', width: 3, label: 'Schnellstrasse' },  // 60-90 km/h
+  { id: 'mountain', min: 10, color: '#e67e22', width: 3, label: 'Bergstrasse' },     // 35-60 km/h
+  { id: 'slow',     min: 0,  color: '#e74c3c', width: 2, label: 'Langsam/Schotter' },// <35 km/h
+];
+
+function roadType(speedMs) {
+  for (const rt of ROAD_TYPES) if (speedMs >= rt.min) return rt;
+  return ROAD_TYPES[3];
+}
+
 let rAbort = null;
+const routeLayerIds = [];
+
 async function fetchRoute() {
   if (rAbort) rAbort.abort();
   // Remove old route layers
-  if (map.getLayer('route-line')) map.removeLayer('route-line');
-  if (map.getLayer('route-glow')) map.removeLayer('route-glow');
-  if (map.getSource('route')) map.removeSource('route');
+  for (const lid of routeLayerIds) { if (map.getLayer(lid)) map.removeLayer(lid); }
+  for (const lid of routeLayerIds) { if (map.getSource(lid)) map.removeSource(lid); }
+  routeLayerIds.length = 0;
   rLegs = [];
   const spots = sel.map(id => S.find(s => s.id === id)).filter(Boolean);
   if (spots.length < 2) { renderSummary(); renderList(); return; }
@@ -510,14 +531,57 @@ async function fetchRoute() {
   const ctrl = new AbortController(); rAbort = ctrl;
   try {
     const c = spots.map(s => `${s.lng},${s.lat}`).join(';');
-    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson&annotations=distance,duration`, { signal: ctrl.signal });
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson&annotations=distance,duration,speed`, { signal: ctrl.signal });
     const d = await r.json();
     if (d.code==='Ok' && d.routes?.[0]) {
       const rt = d.routes[0];
-      map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: rt.geometry } });
-      map.addLayer({ id: 'route-glow', type: 'line', source: 'route', paint: { 'line-color': '#e94560', 'line-width': 8, 'line-opacity': 0.15 } });
-      map.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': '#e94560', 'line-width': 3, 'line-opacity': 0.8 } });
-      rt.legs?.forEach((l, i) => rLegs.push({ from: sel[i], to: sel[i+1], km: Math.round(l.distance/1000), min: Math.round(l.duration/60) }));
+      const coords = rt.geometry.coordinates;
+
+      // Collect all speeds from all legs
+      const allSpeeds = [];
+      rt.legs?.forEach((l, i) => {
+        rLegs.push({ from: sel[i], to: sel[i+1], km: Math.round(l.distance/1000), min: Math.round(l.duration/60) });
+        if (l.annotation?.speed) allSpeeds.push(...l.annotation.speed);
+      });
+
+      if (allSpeeds.length >= coords.length - 1) {
+        // Split route into segments by road type
+        const segments = {}; // { typeId: [[coords]] }
+        let currentType = roadType(allSpeeds[0]);
+        let currentCoords = [coords[0]];
+
+        for (let i = 0; i < allSpeeds.length; i++) {
+          const t = roadType(allSpeeds[i]);
+          currentCoords.push(coords[i + 1]);
+          if (t.id !== currentType.id || i === allSpeeds.length - 1) {
+            if (!segments[currentType.id]) segments[currentType.id] = [];
+            segments[currentType.id].push([...currentCoords]);
+            currentCoords = [coords[i + 1]];
+            currentType = t;
+          }
+        }
+
+        // Add layers for each road type (slow first, highway on top)
+        for (const rt of [...ROAD_TYPES].reverse()) {
+          if (!segments[rt.id]) continue;
+          const srcId = 'route-' + rt.id;
+          const glowId = 'route-glow-' + rt.id;
+          const lineId = 'route-line-' + rt.id;
+          map.addSource(srcId, { type: 'geojson', data: {
+            type: 'FeatureCollection',
+            features: segments[rt.id].map(c => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: c } }))
+          }});
+          map.addLayer({ id: glowId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': rt.width + 5, 'line-opacity': 0.12 } });
+          map.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': rt.width, 'line-opacity': 0.85 } });
+          routeLayerIds.push(glowId, lineId, srcId);
+        }
+      } else {
+        // Fallback: single color if no speed data
+        const srcId = 'route-fallback';
+        map.addSource(srcId, { type: 'geojson', data: { type: 'Feature', geometry: rt.geometry } });
+        map.addLayer({ id: 'route-fb-line', type: 'line', source: srcId, paint: { 'line-color': '#e94560', 'line-width': 3, 'line-opacity': 0.8 } });
+        routeLayerIds.push('route-fb-line', srcId);
+      }
     }
   } catch(e) {}
   rLoading = false; renderSummary(); renderList();
