@@ -162,19 +162,19 @@
 
   .cp {
     position: absolute; pointer-events: auto; cursor: pointer;
-    background: rgba(255,255,255,0.94); color: #1a1a2e;
-    border-radius: 4px; padding: 2px 5px;
-    box-shadow: 0 1px 5px rgba(0,0,0,.18);
-    border: 1px solid #ddd;
+    background: #fff; color: #1a1a2e;
+    border-radius: 14px; padding: 2px 7px 2px 5px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.22);
+    border: 1.5px solid var(--cc, #aaa);
     font-size: 10px; white-space: nowrap;
     display: flex; align-items: center; gap: 3px;
     line-height: 1.2;
-    transition: box-shadow 0.12s;
+    transition: box-shadow 0.1s, transform 0.1s;
   }
-  .cp:hover { box-shadow: 0 3px 12px rgba(0,0,0,.3); z-index: 50 !important; }
-  .cp.cp-route { border-color: #d63050; background: rgba(254,242,242,0.96); }
-  .cp .cp-icon { font-size: 10px; flex-shrink: 0; }
-  .cp .cp-num { background: #d63050; color: #fff; font-size: 7px; font-weight: 700; border-radius: 2px; padding: 0 3px; line-height: 12px; }
+  .cp:hover { box-shadow: 0 3px 14px rgba(0,0,0,.3); z-index: 50 !important; transform: scale(1.05); }
+  .cp.cp-route { border-color: #d63050; background: #fef2f2; }
+  .cp .cp-icon { font-size: 11px; flex-shrink: 0; }
+  .cp .cp-num { background: #d63050; color: #fff; font-size: 7px; font-weight: 700; border-radius: 7px; padding: 0 4px; line-height: 13px; min-width: 13px; text-align: center; }
   .cp .cp-name { font-weight: 600; font-size: 10px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .cp .cp-temp { font-size: 9px; font-weight: 700; }
   .cp .cp-info { color: #6b7280; font-size: 9px; }
@@ -271,8 +271,8 @@
 <script>
 const CAT={
   city:{l:'Altstadt',c:'#e67e22',i:'\u{1F3DB}\u{FE0F}',mi:'\u{1F3F0}'},
-  nature:{l:'Natur',c:'#27ae60',i:'\u{1F3D4}\u{FE0F}',mi:'\u{1F332}'},
-  water:{l:'Baden',c:'#2980b9',i:'\u{1F30A}',mi:'\u{1F4A6}'},
+  nature:{l:'Natur',c:'#27ae60',i:'\u{1F332}',mi:'\u{1F332}'},
+  water:{l:'Baden',c:'#2980b9',i:'\u{1F4A7}',mi:'\u{1F4A7}'},
   beach:{l:'Strand',c:'#f39c12',i:'\u{1F3D6}\u{FE0F}',mi:'\u{2600}\u{FE0F}'},
   home:{l:'Zuhause',c:'#6b7280',i:'\u{1F3E0}',mi:'\u{1F3E0}'},
 };
@@ -774,9 +774,18 @@ function showInfoCard(s, x, y) {
   const btnCls = on ? 'pbtn pbtn-rm' : 'pbtn pbtn-add';
   const btnTxt = on ? '\u2715 Von Route entfernen' : '\u2713 Zur Route hinzufügen';
 
+  // Metrics
+  const mParts = [];
+  if (s.at) mParts.push(`\u{1F321}\u{FE0F} ${s.at}\u00b0C`);
+  if (s.wt) mParts.push(`\u{1F4A7} Wasser ${s.wt}\u00b0C`);
+  if (s.el) mParts.push(`\u2191 ${s.el}m`);
+  if (s.ni) mParts.push(`\u{1F319} ${s.ni} Nächte`);
+  const metricsHtml = mParts.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:11px">${mParts.map(m=>`<span style="background:#f3f4f6;padding:2px 7px;border-radius:6px;color:#374151">${m}</span>`).join('')}</div>` : '';
+
   icBody.innerHTML = `
     <div class="ptitle">${ci} ${s.n}</div>
-    <div class="pcat">${s.co} \u00b7 ${CAT[s.cat]?.l} \u00b7 ${s.ni} Nächte</div>
+    <div class="pcat">${s.co} \u00b7 ${CAT[s.cat]?.l}</div>
+    ${metricsHtml}
     <div class="pdesc">${s.d}</div>
     <div class="pwhy">${s.w}</div>
     ${wcLine}${foodHtml}
@@ -1147,45 +1156,48 @@ function getVisibleSpots() {
 }
 
 // Build panel HTML based on zoom level
+function midTemp(range) {
+  if (!range) return '';
+  const p = range.split('-');
+  return p.length === 2 ? String(Math.round((+p[0] + +p[1]) / 2)) : p[0];
+}
+
 function panelContent(s, zoom) {
   const on = isSel(s.id);
   const ri = on ? sel.indexOf(s.id) : -1;
   const ci = CAT[s.cat]?.i || '';
   const tc = tempColor(s.at);
   const numH = ri >= 0 ? `<span class="cp-num">${ri}</span>` : '';
-  const hi = s.at ? s.at.split('-')[1] : '';
+  const at = midTemp(s.at);
+  const wt = s.wt ? `<span class="cp-info" style="color:#2980b9">\u{1F4A7}${midTemp(s.wt)}\u00b0</span>` : '';
+  const wc = s.wc ? `<span class="cp-info">\u26FA</span>` : '';
+  // Skip category icon if it's 💧 and we already show 💧 with water temp
+  const showIcon = !(s.wt && ci === '\u{1F4A7}');
 
   if (zoom < 7.5) {
-    // COMPACT: icon + temp dot + elevation + wc
-    const wc = s.wc ? '\u26FA' : '';
-    const el = s.el ? `<span class="cp-info">\u2191${s.el}</span>` : '';
-    return `${numH}<span class="cp-icon">${ci}</span><span class="cp-temp" style="color:${tc}">${hi}\u00b0</span>${el}<span class="cp-info">${wc}</span>`;
+    // COMPACT: icon + air temp + water temp + wc
+    const ic1 = showIcon ? `<span class="cp-icon">${ci}</span>` : '';
+    return `${numH}${ic1}<span class="cp-temp" style="color:${tc}">${at}\u00b0</span>${wt}${wc}`;
   }
   if (zoom < 10) {
-    // MEDIUM: icon + short name + key metrics
+    // MEDIUM: icon + short name + temp + water temp + wc
     let nm = s.n.length > 18 ? s.n.slice(0,16)+'\u2026' : s.n;
-    const parts = [];
-    if (hi) parts.push(`<span class="cp-temp" style="color:${tc}">${hi}\u00b0</span>`);
-    if (s.el) parts.push(`<span class="cp-info">\u2191${s.el}m</span>`);
-    if (s.wc) parts.push(`<span class="cp-info">\u26FA</span>`);
-    if (s.ni) parts.push(`<span class="cp-info">${s.ni}N</span>`);
-    return `${numH}<span class="cp-icon">${ci}</span><span class="cp-name">${nm}</span>${parts.join('')}`;
+    const el = s.el ? `<span class="cp-info">\u2191${s.el}m</span>` : '';
+    const ic2 = showIcon ? `<span class="cp-icon">${ci}</span>` : '';
+    return `${numH}${ic2}<span class="cp-name">${nm}</span><span class="cp-temp" style="color:${tc}">${at}\u00b0</span>${wt}${el}${wc}`;
   }
   // FULL: icon + full name + all metrics
-  const parts = [];
-  if (s.at) parts.push(`<span class="cp-temp" style="color:${tc}">${s.at}\u00b0</span>`);
-  if (s.el) parts.push(`<span class="cp-detail">\u2191${s.el}m</span>`);
-  if (s.wt) parts.push(`<span class="cp-detail">\u{1F4A7}${s.wt}\u00b0</span>`);
-  if (s.wc) parts.push(`<span class="cp-detail">\u26FA</span>`);
-  if (s.ni) parts.push(`<span class="cp-detail">${s.ni}N</span>`);
-  return `${numH}<span class="cp-icon">${ci}</span><span class="cp-name">${s.n}</span>${parts.join('')}`;
+  const el = s.el ? `<span class="cp-detail">\u2191${s.el}m</span>` : '';
+  const ni = s.ni ? `<span class="cp-detail">${s.ni}N</span>` : '';
+  const ic3 = showIcon ? `<span class="cp-icon">${ci}</span>` : '';
+  return `${numH}${ic3}<span class="cp-name">${s.n}</span><span class="cp-temp" style="color:${tc}">${at}\u00b0</span>${wt}${el}${wc}${ni}`;
 }
 
 // Estimate panel pixel width based on zoom
 function estPanelW(s, zoom) {
-  if (zoom < 7.5) return 55 + (s.el ? 20 : 0) + (s.wc ? 12 : 0);
-  if (zoom < 10) { const n = Math.min(s.n.length, 18); return 50 + n * 6; }
-  return 60 + s.n.length * 6;
+  if (zoom < 7.5) return 52 + (s.wt ? 28 : 0) + (s.wc ? 12 : 0);
+  if (zoom < 10) { const n = Math.min(s.n.length, 18); return 55 + n * 6 + (s.wt ? 25 : 0); }
+  return 65 + s.n.length * 6 + (s.wt ? 30 : 0);
 }
 const PANEL_H = 18;
 
@@ -1194,19 +1206,21 @@ function rectsOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+const PIN_TIP = 0;
 function placePanel(dotX, dotY, pw, ph, placed, mw, mh) {
-  // Candidate offsets: try close first, then further
+  // Candidates: prefer directly above (classic pin), then nearby alternatives
   const cands = [];
-  for (const dist of [22, 40, 60, 85]) {
+  const totalH = ph + PIN_TIP;
+  for (const dist of [20, 36, 54, 75]) {
     cands.push(
-      { dx: dist, dy: -ph/2 },      // right
-      { dx: -dist - pw, dy: -ph/2 }, // left
-      { dx: -pw/2, dy: -dist - ph }, // top
-      { dx: -pw/2, dy: dist },       // bottom
-      { dx: dist, dy: -dist - ph },  // top-right
-      { dx: -dist - pw, dy: -dist - ph }, // top-left
-      { dx: dist, dy: dist },        // bottom-right
-      { dx: -dist - pw, dy: dist }   // bottom-left
+      { dx: -pw/2, dy: -dist - totalH },              // above center (preferred)
+      { dx: -pw/2 + 15, dy: -dist - totalH },         // above slightly right
+      { dx: -pw/2 - 15, dy: -dist - totalH },         // above slightly left
+      { dx: dist * 0.5, dy: -dist - totalH },         // above-right
+      { dx: -pw - dist * 0.5, dy: -dist - totalH },   // above-left
+      { dx: dist, dy: -totalH/2 },                    // right
+      { dx: -dist - pw, dy: -totalH/2 },              // left
+      { dx: -pw/2, dy: dist },                        // below (last resort)
     );
   }
   for (const c of cands) {
@@ -1257,10 +1271,14 @@ function updatePanels() {
     const { s, x: dx, y: dy, rect } = r;
     const on = isSel(s.id);
     const cls = on ? 'cp cp-route' : 'cp';
-    // Panel center-bottom to dot
-    const lx = rect.x + rect.w / 2, ly = rect.y + rect.h / 2;
-    svgLines += `<line x1="${dx}" y1="${dy}" x2="${lx}" y2="${ly}" stroke="rgba(120,120,140,0.35)" stroke-width="1"/>`;
-    html += `<div class="${cls}" data-id="${s.id}" style="left:${rect.x}px;top:${rect.y}px;transform:none">${panelContent(s, zoom)}</div>`;
+    const cc = on ? '#d63050' : (CAT[s.cat]?.c || '#aaa');
+    // Leader line from dot to nearest edge of pill
+    const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+    const ang = Math.atan2(dy - cy, dx - cx);
+    const ex = cx + Math.cos(ang) * Math.min(rect.w/2, Math.abs(rect.w/2 / Math.cos(ang) || rect.w/2));
+    const ey = cy + Math.sin(ang) * Math.min(rect.h/2, Math.abs(rect.h/2 / Math.sin(ang) || rect.h/2));
+    svgLines += `<line x1="${dx}" y1="${dy}" x2="${ex}" y2="${ey}" stroke="${cc}" stroke-opacity="0.45" stroke-width="1.5" stroke-linecap="round"/>`;
+    html += `<div class="${cls}" data-id="${s.id}" style="left:${rect.x}px;top:${rect.y}px;--cc:${cc};transform:none">${panelContent(s, zoom)}</div>`;
   }
 
   svgEl.innerHTML = svgLines;
