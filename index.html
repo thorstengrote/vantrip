@@ -88,10 +88,14 @@
   #map { flex: 1; }
 
   /* ===== POPUP (MapLibre) ===== */
-  .maplibregl-popup-content { background: #1a1a2e !important; color: #e0e0e0 !important; border: 1px solid #0f3460 !important; border-radius: 10px !important; padding: 10px !important; max-height: 70vh; overflow-y: auto; }
+  .maplibregl-popup-content { background: #1a1a2e !important; color: #e0e0e0 !important; border: 1px solid #0f3460 !important; border-radius: 10px !important; padding: 10px !important; max-height: 75vh; overflow-y: auto; overflow-x: hidden; }
+  .maplibregl-popup-content::-webkit-scrollbar { width: 4px; }
+  .maplibregl-popup-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
   .maplibregl-popup-tip { border-top-color: #1a1a2e !important; }
-  .maplibregl-popup-close-button { color: #889; font-size: 18px; padding: 2px 6px; }
-  .maplibregl-popup { max-width: 360px !important; z-index: 5; }
+  .maplibregl-popup-close-button { color: #889; font-size: 20px; padding: 4px 8px; z-index: 10; }
+  .maplibregl-popup { max-width: 370px !important; z-index: 5; }
+  .maplibregl-popup-anchor-bottom .maplibregl-popup-content { margin-bottom: 10px; }
+  .maplibregl-popup-anchor-top .maplibregl-popup-content { margin-top: 10px; }
 
   /* Popup carousel */
   .pcr img { width: 100%; height: 100%; object-fit: cover; display: none; }
@@ -123,12 +127,12 @@
   #lightbox.open { display: flex; }
   #lb-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; z-index: 10001; }
   #lb-title { color: #e94560; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
-  #lb-wrap { position: relative; max-width: 90vw; max-height: 70vh; display: flex; align-items: center; justify-content: center; }
-  #lb-img { max-width: 90vw; max-height: 70vh; border-radius: 8px; object-fit: contain; }
-  .lb-arr { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; }
+  #lb-wrap { position: relative; width: 80vw; height: 70vh; display: flex; align-items: center; justify-content: center; }
+  #lb-img { max-width: 100%; max-height: 100%; border-radius: 8px; object-fit: contain; }
+  .lb-arr { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: #fff; border: none; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 24px; z-index: 10002; }
   .lb-arr:hover { background: rgba(233,69,96,0.5); }
-  #lb-prev { left: -50px; }
-  #lb-next { right: -50px; }
+  #lb-prev { left: 20px; }
+  #lb-next { right: 20px; }
   #lb-dots { display: flex; gap: 4px; margin-top: 12px; }
   #lb-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; }
   #lb-dots .dot.on { background: #e94560; }
@@ -848,7 +852,7 @@ function renderMarkers() {
       <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation starten</a>
     </div>`;
 
-    const popup = new maplibregl.Popup({maxWidth:'370px',offset:15,closeButton:true})
+    const popup = new maplibregl.Popup({maxWidth:'370px',offset:25,closeButton:true,anchor:'bottom'})
       .setHTML(`
       ${popupCarousel(s.id)}
       <div class="ptitle">${CAT[s.cat]?.i||''} ${s.n}</div>
