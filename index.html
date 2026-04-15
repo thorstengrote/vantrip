@@ -197,6 +197,7 @@
       <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
       <button class="ab ab2" onclick="fitRoute()">Zeig Route</button>
       <button class="ab ab2" onclick="clearRoute()">Leeren</button>
+      <button class="ab ab1" onclick="shareRoute()" id="share-btn">Teilen</button>
     </div>
   </div>
 </div>
@@ -891,7 +892,44 @@ function exportRoute() {
 const _t = S.reduce((a,s) => a + (imgCache[s.id]?.length||0), 0);
 document.getElementById('hdr-sub').textContent = `RO + BG + RS + MK | 3 Wochen \u00b7 ${_t} Fotos`;
 
-render();
+// ============================================================
+// ROUTE SHARING via URL hash
+// ============================================================
+function shareRoute() {
+  const inner = sel.filter(x => x !== 'bonn');
+  if (!inner.length) return alert('Erst Spots auswählen!');
+  const hash = '#r=' + inner.join(',');
+  const url = location.origin + location.pathname + hash;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('share-btn');
+    btn.textContent = 'Link kopiert!';
+    setTimeout(() => btn.textContent = 'Teilen', 2000);
+  }).catch(() => {
+    prompt('Route-Link kopieren:', url);
+  });
+}
+
+// Load route from URL hash on page load
+function loadFromHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#r=')) return false;
+  const ids = hash.slice(3).split(',').filter(id => S.find(s => s.id === id));
+  if (!ids.length) return false;
+  sel = ['bonn', ...ids, 'bonn'];
+  localStorage.setItem('vt-sel', JSON.stringify(sel));
+  return true;
+}
+
+// Also update hash when route changes
+const origToggle = toggle;
+
+if (loadFromHash()) {
+  setTab('sel');
+  render();
+  setTimeout(fitRoute, 800);
+} else {
+  render();
+}
 </script>
 </body>
 </html>
