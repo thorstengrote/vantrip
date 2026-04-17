@@ -337,10 +337,10 @@
       <div class="st"><span class="v" id="s-ni">-</span><span class="l"> Nächte</span></div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-      <span style="font-size:8px;color:#2ecc71">\u2501 Autobahn</span>
-      <span style="font-size:8px;color:#3498db">\u2501 Schnellstr.</span>
-      <span style="font-size:8px;color:#e67e22">\u2501 Bergstr.</span>
-      <span style="font-size:8px;color:#e74c3c">\u2501 Langsam</span>
+      <span style="font-size:8px;color:#2ecc71">&#9473; Autobahn</span>
+      <span style="font-size:8px;color:#3498db">&#9473; Schnellstr.</span>
+      <span style="font-size:8px;color:#e67e22">&#9473; Bergstr.</span>
+      <span style="font-size:8px;color:#e74c3c">&#9473; Langsam</span>
     </div>
     <div class="btns">
       <button class="ab ab1" onclick="exportRoute()">Google Maps</button>
@@ -1255,13 +1255,7 @@ function loadRoute(idx) {
   render();
   setTimeout(fitRoute, 500);
 }
-function previewRoute(idx) {
-  const ids = ROUTES[idx].ids;
-  const pts = ids.map(id => S.find(s=>s.id===id)).filter(Boolean);
-  if (!pts.length) return;
-  const lngs=pts.map(s=>s.lng), lats=pts.map(s=>s.lat);
-  map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],{padding:40,duration:1000});
-}
+
 function updCounts() { document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:''; document.getElementById('n-all').textContent=`(${S.filter(s=>s.cat!=='home').length})`; }
 
 function renderFilters() {
@@ -1325,7 +1319,6 @@ function renderList() {
         <div class="rdesc">${r.desc}</div>
         <ul class="rpros">${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul>
         <button class="rbtn" onclick="loadRoute(${i})">Route laden</button>
-        <button class="rbtn" style="background:#333;margin-left:4px" onclick="previewRoute(${i})">Vorschau</button>
       </div>`).join('');
     return;
   }
