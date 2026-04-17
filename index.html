@@ -258,13 +258,53 @@
     #infocard { width: 280px; }
   }
 
-  /* Small tablet / large phone: <768px — stacked */
+  /* Mobile bottom nav */
+  #mobile-nav {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    background: #fff; border-top: 1px solid #e0e3e8;
+    box-shadow: 0 -2px 10px rgba(0,0,0,.08);
+    padding: 0; height: 52px;
+  }
+  #mobile-nav .mn-tabs { display: flex; height: 100%; }
+  #mobile-nav .mn-tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; cursor: pointer; color: #9ca3af; font-size: 9px; font-weight: 600;
+    border: none; background: none; transition: color 0.1s;
+  }
+  #mobile-nav .mn-tab.on { color: #d63050; }
+  #mobile-nav .mn-tab .mn-icon { font-size: 18px; }
+
+  /* Mobile: <768px */
   @media (max-width: 767px) {
-    body { flex-direction: column; }
-    #sidebar { width: 100%; min-width: unset; height: 50vh; }
-    #map { height: 50vh; }
-    #infocard { width: 260px; max-height: 60vh; }
-    .gs-carousel .pcr { height: 120px; }
+    body { flex-direction: column; position: relative; }
+    #sidebar {
+      width: 100%; min-width: unset; height: 100vh; height: 100dvh;
+      position: absolute; inset: 0; z-index: 9;
+      padding-bottom: 52px;
+      display: none;
+    }
+    #sidebar.mobile-visible { display: flex; }
+    #map { width: 100%; height: 100vh; height: 100dvh; padding-bottom: 52px; }
+    #mobile-nav { display: block; }
+    #sidebar-header h1 { font-size: 15px; }
+    #sidebar-header p { font-size: 10px; }
+    #summary { font-size: 10px; padding: 8px 10px; }
+    #summary .btns { flex-wrap: wrap; }
+    #summary .ab { font-size: 10px; padding: 4px 8px; }
+    .card { padding: 8px 10px 8px 26px; }
+    .card .nm { font-size: 12px; }
+    .card .rn { left: 4px; top: 10px; width: 16px; height: 16px; font-size: 9px; }
+    .card-img { width: 56px; height: 42px; }
+    .card-img-ph { width: 56px; height: 42px; }
+    #infocard { width: calc(100vw - 20px); max-width: 320px; max-height: 70vh; left: 10px !important; right: 10px; }
+    .gs-carousel .pcr { height: 140px; }
+    .gs-body { font-size: 12px; }
+    .gs-section p { font-size: 11px; }
+    #sidebar-toggle { display: none !important; }
+    #filters { padding: 6px 10px; }
+    #controls { padding: 4px 10px; }
+    #tabs .tab { padding: 7px; font-size: 11px; }
+    .cp { font-size: 9px; padding: 2px 4px 2px 3px; }
   }
 </style>
 </head>
@@ -314,6 +354,16 @@
   <div id="panels-overlay"><svg id="leader-svg"></svg></div>
 </div>
 <div id="infocard"><div id="ic-carousel"></div><div id="ic-body"></div></div>
+
+<!-- Mobile bottom navigation -->
+<nav id="mobile-nav">
+  <div class="mn-tabs">
+    <button class="mn-tab on" onclick="mobileView('map')"><span class="mn-icon">&#x1F5FA;</span>Karte</button>
+    <button class="mn-tab" onclick="mobileView('list')"><span class="mn-icon">&#x1F4CB;</span>Alle</button>
+    <button class="mn-tab" onclick="mobileView('route')"><span class="mn-icon">&#x1F697;</span>Route</button>
+    <button class="mn-tab" onclick="mobileView('suggest')"><span class="mn-icon">&#x2B50;</span>Tipps</button>
+  </div>
+</nav>
 
 <!-- Lightbox -->
 <div id="lightbox">
@@ -1534,8 +1584,27 @@ function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
   document.body.classList.toggle('sb-collapsed');
-  // Resize map after transition
   setTimeout(() => { map.resize(); updatePanels(); }, 280);
+}
+
+// Mobile view switching
+function mobileView(view) {
+  const sb = document.getElementById('sidebar');
+  const navBtns = document.querySelectorAll('#mobile-nav .mn-tab');
+  navBtns.forEach((b, i) => b.classList.toggle('on',
+    (view === 'map' && i === 0) || (view === 'list' && i === 1) ||
+    (view === 'route' && i === 2) || (view === 'suggest' && i === 3)
+  ));
+
+  if (view === 'map') {
+    sb.classList.remove('mobile-visible');
+    setTimeout(() => { map.resize(); updatePanels(); }, 50);
+  } else {
+    sb.classList.add('mobile-visible');
+    if (view === 'list') setTab('all');
+    else if (view === 'route') setTab('sel');
+    else if (view === 'suggest') setTab('routes');
+  }
 }
 
 function renderSummary() {
@@ -1548,7 +1617,13 @@ function renderSummary() {
   document.getElementById('s-ni').textContent=pts.length?`~${Math.round(ni)}`:'-';
 }
 
-function flyTo(id) { const s=S.find(x=>x.id===id); if(s){map.flyTo({center:[s.lng,s.lat],zoom:11,duration:1200,pitch:50}); setTimeout(()=>{ const p=map.project([s.lng,s.lat]); showInfoCard(s, p.x+400, p.y+100); },1300);} }
+function flyTo(id) {
+  const s=S.find(x=>x.id===id); if(!s) return;
+  // On mobile, switch to map view first
+  if (window.innerWidth < 768) mobileView('map');
+  map.flyTo({center:[s.lng,s.lat],zoom:11,duration:1200,pitch:50});
+  setTimeout(()=>{ const p=map.project([s.lng,s.lat]); showInfoCard(s, p.x+400, p.y+100); },1300);
+}
 function exportRoute() {
   const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean);
   if(!pts.length) return alert('Erst Spots auswählen!');
