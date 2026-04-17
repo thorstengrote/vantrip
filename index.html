@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Van-Trip Planner 2026</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚐</text></svg>">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1106,10 +1107,10 @@ function previewRoute(idx) {
   const lngs=pts.map(s=>s.lng), lats=pts.map(s=>s.lat);
   map.fitBounds([[Math.min(...lngs),Math.min(...lats)],[Math.max(...lngs),Math.max(...lats)]],{padding:40,duration:1000});
 }
-function updCounts() { document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:''; document.getElementById('n-all').textContent=`(${S.length})`; }
+function updCounts() { document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:''; document.getElementById('n-all').textContent=`(${S.filter(s=>s.cat!=='home').length})`; }
 
 function renderFilters() {
-  document.getElementById('filters').innerHTML = Object.entries(CAT).map(([k,c]) =>
+  document.getElementById('filters').innerHTML = Object.entries(CAT).filter(([k])=>k!=='home').map(([k,c]) =>
     `<button class="fbtn ${filt.has(k)?'on':''}" style="--c:${c.c}" onclick="filt.has('${k}')?filt.delete('${k}'):filt.add('${k}');render()">${c.i} ${c.l}</button>`
   ).join('');
 }
@@ -1118,7 +1119,7 @@ function visible() {
   const wc = document.getElementById('wc-chk').checked;
   const foodOnly = document.getElementById('food-chk').checked;
   const q = document.getElementById('search').value.toLowerCase().trim();
-  let list = S.filter(s => filt.has(s.cat));
+  let list = S.filter(s => filt.has(s.cat) && s.cat !== 'home');
   if (wc) list = list.filter(s => s.wc);
   if (foodOnly) list = list.filter(s => FOOD[s.id]);
   if (q) list = list.filter(s => s.n.toLowerCase().includes(q) || s.co.toLowerCase().includes(q) || s.d.toLowerCase().includes(q) || s.t.some(t=>t.toLowerCase().includes(q)));
