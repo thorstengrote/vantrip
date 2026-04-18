@@ -1748,7 +1748,8 @@ function renderList() {
       h += `<div class="gs">
         <div class="gs-head" onclick="flyTo('${s.id}')">
           <div class="gs-num">${i}</div>
-          <div class="gs-title">${ci} ${s.n}</div>
+          <div class="gs-title">${ci} ${s.n}${favDotsHtml(s.id)}</div>
+          ${favBtnHtml(s.id)}
           <div class="gs-nights">${s.co} \u00b7 ${s.ni}N</div>
         </div>
         ${carousel}
@@ -1791,6 +1792,7 @@ function renderList() {
         <div class="tgs">${foodTag}${wcTag}${s.t.slice(0,4).map(t=>`<span class="tg">${t}</span>`).join('')}</div>
       </div>
       ${imgEl}
+      <div style="position:absolute;right:10px;top:8px">${favBtnHtml(s.id)}</div>
       ${routeBtn}
     </div>`;
   });
