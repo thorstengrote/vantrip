@@ -1298,6 +1298,94 @@ const icCarousel = document.getElementById('ic-carousel');
 const icBody = document.getElementById('ic-body');
 let icSpotId = null, icHideTimer = null, icPinned = false;
 
+function spotTips(s) {
+  const tips = [];
+  const w = WILDLIFE[s.id] || '';
+  const g = GUIDE[s.id] || '';
+  const tags = (s.t || []).join(' ').toLowerCase();
+  const desc = (s.d || '').toLowerCase();
+
+  // Network
+  if (s.net === 0) tips.push({icon:'\u{1F4F5}',text:'Kein Netz \u2013 Offline-Karten + GPS vorher laden, Powerbank mitnehmen',pri:1});
+  else if (s.net === 1) tips.push({icon:'\u{1F4F6}',text:'Netz l\u00fcckenhaft \u2013 Offline-Karten empfohlen',pri:2});
+
+  // Bears
+  if (w.match(/[Bb]\u00e4r|[Bb]ear|[Bb]raunb/)) tips.push({icon:'\u{1F43B}',text:'B\u00e4rengebiet: Essen nachts im Van verschlie\u00dfen (nicht im Vorzelt!). B\u00e4renspray in Outdoor-L\u00e4den in Bra\u0219ov/Sibiu kaufbar (~20\u20ac)',pri:1});
+
+  // Wolves (less actionable but good to know)
+  if (w.match(/[Ww]\u00f6lf|[Ww]olf/)) tips.push({icon:'\u{1F43A}',text:'Wolfsgebiet: Nachts Licht/L\u00e4rm h\u00e4lt sie fern. Sehr scheu, Begegnungen extrem selten',pri:3});
+
+  // Ticks
+  if (w.match(/[Zz]eck/) || s.el > 500 && s.cat === 'nature') tips.push({icon:'\u{1F9B0}',text:'Zeckengebiet: Abends K\u00f6rper absuchen, Zeckenzange + Desinfektionsmittel mitnehmen',pri:2});
+
+  // Sea urchins
+  if (w.match(/[Ss]eeigel/) || tags.includes('schnorchel')) tips.push({icon:'\u{1F9B4}',text:'Seeigel auf Felsen \u2013 Badeschuhe tragen! Bei Stich: Stachel mit Essig einweichen',pri:1});
+
+  // Portuguese man-of-war
+  if (w.match(/[Gg]aleere/) || desc.includes('galeere')) tips.push({icon:'\u{1FAB8}',text:'Portugiesische Galeere (selten): Am Strand liegen lassen, NICHT anfassen',pri:1});
+
+  // Vipers
+  if (w.match(/[Kk]reuzotter|[Vv]iper|[Hh]ornviper/)) tips.push({icon:'\u{1F40D}',text:'Vipern m\u00f6glich: Festes Schuhwerk auf Wanderwegen, auf Steinen aufpassen',pri:3});
+
+  // Wild camping
+  if (s.wc) tips.push({icon:'\u{26FA}',text:'Freistehen m\u00f6glich: M\u00fcllbeutel mitnehmen, Wasser-Vorrat pr\u00fcfen (10-20L), fr\u00fch kommen f\u00fcr gute Pl\u00e4tze',pri:2});
+
+  // Elevation - cold at night
+  if (s.el >= 1200) tips.push({icon:'\u{1F9E5}',text:'H\u00f6henlage ('+s.el+'m): Auch im Sommer nachts kalt (5-10\u00b0C), warme Kleidung + Schlafsack einpacken',pri:1});
+  else if (s.el >= 800) tips.push({icon:'\u{1F321}',text:'Berglage ('+s.el+'m): Abends k\u00fchler als an der K\u00fcste, leichte Jacke mitnehmen',pri:3});
+
+  // Hot climate
+  const hiTemp = s.at ? parseInt(s.at.split('-')[1]) : 0;
+  if (hiTemp >= 38) tips.push({icon:'\u2600\uFE0F',text:'Extreme Hitze (bis '+hiTemp+'\u00b0C): Viel Wasser mitnehmen, Mittagshitze meiden, fr\u00fch starten',pri:1});
+  else if (hiTemp >= 34) tips.push({icon:'\u2600\uFE0F',text:'Hei\u00df (bis '+hiTemp+'\u00b0C): Sonnencreme 50+, genug Wasser, Hut',pri:2});
+
+  // Cold water
+  if (s.wt) {
+    const loWt = parseInt(s.wt.split('-')[0]);
+    if (loWt <= 15) tips.push({icon:'\u{1F9CA}',text:'Kaltes Wasser ('+s.wt+'\u00b0C): Kurz erfrischend, nicht lange drin bleiben. Neopren-Shorty f\u00fcr l\u00e4ngeres Schwimmen',pri:2});
+  }
+
+  // Cliff jumping
+  if (tags.includes('klippenspring') || tags.includes('cliff jump') || desc.includes('klippenspring')) tips.push({icon:'\u{1F3CA}',text:'Klippenspringen: Wassertiefe IMMER vorher pr\u00fcfen, nie allein, nie kopf\u00fcber beim ersten Mal',pri:1});
+
+  // Caves
+  if (tags.includes('h\u00f6hle') || desc.includes('h\u00f6hle') || tags.includes('cave')) tips.push({icon:'\u{1F9CA}',text:'H\u00f6hlenbesuch: Jacke mitnehmen (6-12\u00b0C drin), Taschenlampe, feste Schuhe',pri:2});
+
+  // Surfing
+  if (tags.includes('surf')) tips.push({icon:'\u{1F3C4}',text:'Surfspot: Str\u00f6mungen beachten, nie allein surfen, Board-Verleih vor Ort meistens verf\u00fcgbar',pri:3});
+
+  // Kitesurf
+  if (tags.includes('kitesurf') || tags.includes('kite')) tips.push({icon:'\u{1FA81}',text:'Kitespot: Wind kann stark sein, Sonnenschutz + feste Schuhe am Strand',pri:3});
+
+  // Via Ferrata
+  if (tags.includes('via ferrata') || tags.includes('klettersteig')) tips.push({icon:'\u{1F9D7}',text:'Klettersteig: Festes Schuhwerk Pflicht, Helm wird meist gestellt, Schwindelfreiheit n\u00f6tig',pri:1});
+
+  // Kayak
+  if (tags.includes('kajak') || tags.includes('kayak')) tips.push({icon:'\u{1F6F6}',text:'Kajak: Wasserdichte H\u00fclle f\u00fcrs Handy, Sonnencreme die nicht abgeht, Wasser mitnehmen',pri:3});
+
+  // Remote / no food
+  if (!FOOD[s.id] && s.cat !== 'city' && s.cat !== 'home') tips.push({icon:'\u{1F354}',text:'Abgelegen \u2013 Proviant und Wasser vorher einpacken, kein Restaurant/Laden in der N\u00e4he',pri:1});
+
+  // Gravel/track roads
+  if (s.el > 800 && s.cat === 'nature' && s.wc) tips.push({icon:'\u{1F697}',text:'M\u00f6glicherweise Schotterpiste: Langsam fahren, Bodenfreiheit hilft, Reifendruck ggf. reduzieren',pri:2});
+
+  // UNESCO / popular
+  if (tags.includes('unesco') || tags.includes('ikonisch')) tips.push({icon:'\u{1F3DF}',text:'Beliebter Spot: Fr\u00fch morgens kommen um Massen zu vermeiden',pri:3});
+
+  // Sort by priority (1 = most important first)
+  tips.sort((a,b) => a.pri - b.pri);
+  return tips;
+}
+
+function spotTipsHtml(s) {
+  const tips = spotTips(s);
+  if (!tips.length) return '';
+  return `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-bottom:6px">
+    <div style="font-size:10px;font-weight:600;color:#9a3412;margin-bottom:4px">\u{1F392} Tipps & Vorbereitung</div>
+    ${tips.map(t => `<div style="font-size:10px;line-height:1.4;color:#78350f;margin:2px 0">${t.icon} ${t.text}</div>`).join('')}
+  </div>`;
+}
+
 function showInfoCard(s, x, y, pin) {
   clearTimeout(icHideTimer);
   if (pin) icPinned = true;
@@ -1346,6 +1434,7 @@ function showInfoCard(s, x, y, pin) {
     <div class="pdesc">${GUIDE[s.id] || s.d}</div>
     <div class="pwhy">\u{1F4A1} ${s.w}</div>
     ${wcLine}${foodHtml}${WILDLIFE[s.id] ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:#065f46;margin-bottom:3px">\u{1F33F} Tier- & Pflanzenwelt</div><div style="font-size:11px;color:#064e3b;line-height:1.4">${WILDLIFE[s.id]}</div></div>` : ''}
+    ${spotTipsHtml(s)}
     <div style="margin:4px 0">${tagsHtml}</div>
     ${navBtn}
     <button class="${btnCls}" onclick="toggle('${s.id}')" style="width:100%;margin-top:4px">${btnTxt}</button>
@@ -2050,7 +2139,7 @@ function renderList() {
         <div class="gs-metrics">${metrics.map(m => `<span>${m}</span>`).join('')}</div>
         <div class="gs-body">${GUIDE[s.id] || s.d}</div>
         <div class="gs-why">\u{1F4A1} ${s.w}</div>
-        ${wcHtml}${WILDLIFE[s.id] ? `<div class="gs-section" style="background:#ecfdf5;border-radius:6px;margin:4px 10px;border:1px solid #a7f3d0"><div class="gs-section-title">\u{1F33F} Tier- & Pflanzenwelt</div><p style="color:#064e3b">${WILDLIFE[s.id]}</p></div>` : ''}${foodHtml}${tagsHtml}
+        ${wcHtml}${WILDLIFE[s.id] ? `<div class="gs-section" style="background:#ecfdf5;border-radius:6px;margin:4px 10px;border:1px solid #a7f3d0"><div class="gs-section-title">\u{1F33F} Tier- & Pflanzenwelt</div><p style="color:#064e3b">${WILDLIFE[s.id]}</p></div>` : ''}${spotTipsHtml(s)}${foodHtml}${tagsHtml}
         <div class="gs-actions" onclick="event.stopPropagation()">
           <button class="ab ab2" onclick="mv('${s.id}',-1)">\u25B2 Hoch</button>
           <button class="ab ab2" onclick="mv('${s.id}',1)">\u25BC Runter</button>
