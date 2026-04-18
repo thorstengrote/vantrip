@@ -386,10 +386,10 @@
       <div class="st"><span class="v" id="s-ni">-</span><span class="l"> Nächte</span></div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-      <span style="font-size:8px;color:#2ecc71">&#9473; Autobahn</span>
-      <span style="font-size:8px;color:#3498db">&#9473; Schnellstr.</span>
-      <span style="font-size:8px;color:#e67e22">&#9473; Bergstr.</span>
-      <span style="font-size:8px;color:#e74c3c">&#9473; Langsam</span>
+      <span style="font-size:8px;color:#00ff88">&#9473; Autobahn</span>
+      <span style="font-size:8px;color:#00ccff">&#9473; Schnellstr.</span>
+      <span style="font-size:8px;color:#ff8800">&#9473; Bergstr.</span>
+      <span style="font-size:8px;color:#ff0066">&#9473; Langsam</span>
     </div>
     <div class="btns">
       <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
@@ -406,8 +406,8 @@
 <div id="map" style="position:relative">
   <button id="sidebar-toggle" onclick="toggleSidebar()" title="Sidebar ein/ausblenden">&#9776;</button>
   <div id="layer-picker">
-    <div class="lp-opt on" onclick="setMapLayer('satellite')"><div class="lp-icon">&#x1F6F0;</div><div class="lp-label">Satellit</div></div>
-    <div class="lp-opt" onclick="setMapLayer('outdoor')"><div class="lp-icon">&#x1F3D4;</div><div class="lp-label">Outdoor</div></div>
+    <div class="lp-opt" onclick="setMapLayer('satellite')"><div class="lp-icon">&#x1F6F0;</div><div class="lp-label">Satellit</div></div>
+    <div class="lp-opt on" onclick="setMapLayer('outdoor')"><div class="lp-icon">&#x1F3D4;</div><div class="lp-label">Outdoor</div></div>
     <div class="lp-opt" onclick="setMapLayer('standard')"><div class="lp-icon">&#x1F5FA;</div><div class="lp-label">Karte</div></div>
   </div>
   <div id="panels-overlay"><svg id="leader-svg"></svg></div>
@@ -848,8 +848,8 @@ let rLines = [], rLegs = [], rLoading = false;
 // MAP (MapLibre GL JS — 3D terrain)
 // ============================================================
 // Base styles
-const STYLE_INIT = {
-  version: 8, name: 'VanTrip',
+const STYLE_SAT = {
+  version: 8, name: 'Satellite',
   sources: {
     'satellite': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 18, attribution: 'Esri' }
   },
@@ -859,7 +859,7 @@ const STYLE_INIT = {
 };
 const map = new maplibregl.Map({
   container: 'map',
-  style: STYLE_INIT,
+  style: 'https://tiles.openfreemap.org/styles/liberty',
   center: [23.5, 44],
   zoom: 5.5,
   pitch: 45,
@@ -895,13 +895,23 @@ map.addControl(btn3D, 'top-right');
 // Set initial state
 setTimeout(() => { if (btn3D._btn) btn3D._btn.classList.add('active'); }, 100);
 
+let hoverEnabled = true;
+const btnHover = new MapButton('\u{1F441}', 'Hover-Details Ein/Aus', () => {
+  hoverEnabled = !hoverEnabled;
+  btnHover._btn.classList.toggle('active', hoverEnabled);
+  if (!hoverEnabled) hideInfoCard();
+});
+btnHover._btn = null;
+map.addControl(btnHover, 'top-right');
+setTimeout(() => { if (btnHover._btn) btnHover._btn.classList.add('active'); }, 100);
+
 // Layer/Style system
 const STYLES = {
   satellite: null, // custom raster style (initial)
   standard: 'https://tiles.openfreemap.org/styles/liberty',
   outdoor: 'https://tiles.openfreemap.org/styles/liberty', // + hillshade
 };
-let activeLayer = 'satellite';
+let activeLayer = 'outdoor';
 
 function addCustomLayers() {
   // Terrain
@@ -944,7 +954,7 @@ function setMapLayer(id) {
 
   if (id === 'satellite') {
     // Switch to raster satellite
-    map.setStyle(STYLE_INIT);
+    map.setStyle(STYLE_SAT);
   } else {
     // Switch to vector style
     map.setStyle(STYLES[id]);
@@ -984,10 +994,10 @@ map.on('load', () => { addCustomLayers(); });
 // ============================================================
 // Road type colors based on speed (OSRM annotation)
 const ROAD_TYPES = [
-  { id: 'highway',  min: 25, color: '#2ecc71', width: 4, label: 'Autobahn' },      // >90 km/h
-  { id: 'main',     min: 17, color: '#3498db', width: 3, label: 'Schnellstrasse' },  // 60-90 km/h
-  { id: 'mountain', min: 10, color: '#e67e22', width: 3, label: 'Bergstrasse' },     // 35-60 km/h
-  { id: 'slow',     min: 0,  color: '#e74c3c', width: 2, label: 'Langsam/Schotter' },// <35 km/h
+  { id: 'highway',  min: 25, color: '#00ff88', width: 5, label: 'Autobahn' },      // >90 km/h — neon green
+  { id: 'main',     min: 17, color: '#00ccff', width: 4, label: 'Schnellstrasse' },  // 60-90 — neon cyan
+  { id: 'mountain', min: 10, color: '#ff8800', width: 4, label: 'Bergstrasse' },     // 35-60 — neon orange
+  { id: 'slow',     min: 0,  color: '#ff0066', width: 3, label: 'Langsam/Schotter' },// <35 — neon pink
 ];
 
 function roadType(speedMs) {
@@ -2044,13 +2054,14 @@ function addSpotsLayers() {
   dotLayers.forEach(layer => {
     map.on('mouseenter', layer, (e) => {
       map.getCanvas().style.cursor = 'pointer';
+      if (!hoverEnabled) return;
       const f = e.features[0];
       const s = S.find(x => x.id === f.properties.id);
       if (s) showInfoCard(s, e.originalEvent.clientX, e.originalEvent.clientY);
     });
     map.on('mouseleave', layer, () => {
       map.getCanvas().style.cursor = '';
-      hideInfoCard();
+      if (hoverEnabled) hideInfoCard();
     });
     map.on('click', layer, (e) => {
       const f = e.features[0];
@@ -2230,10 +2241,11 @@ function updatePanels() {
   // Event handlers — panels show unified info card
   panelsEl.querySelectorAll('.cp').forEach(el => {
     el.addEventListener('mouseenter', (e) => {
+      if (!hoverEnabled) return;
       const s = S.find(x => x.id === el.dataset.id);
       if (s) showInfoCard(s, e.clientX, e.clientY);
     });
-    el.addEventListener('mouseleave', () => hideInfoCard());
+    el.addEventListener('mouseleave', () => { if (hoverEnabled) hideInfoCard(); });
     el.addEventListener('click', (e) => {
       const s = S.find(x => x.id === el.dataset.id);
       if (s) showInfoCard(s, e.clientX, e.clientY);
