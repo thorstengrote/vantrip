@@ -1021,7 +1021,7 @@ async function fetchOsmTags(lat, lng) {
   } catch(e) {}
   // 3. Overpass API
   try {
-    const q = `[out:json][timeout:5];way(around:50,${lat},${lng})[highway];out tags 1;`;
+    const q = `[out:json][timeout:8];way(around:100,${lat},${lng})[highway];out tags 1;`;
     const res = await fetch('https://overpass-api.de/api/interpreter', {method:'POST', body:'data='+encodeURIComponent(q)});
     const data = await res.json();
     const way = data.elements?.[0]?.tags || {};
@@ -1125,7 +1125,15 @@ async function fetchRoute() {
       });
 
       if (allSpeeds.length >= coords.length - 1) {
-        // Split route into segments by road type
+        // Calculate leg boundary indices (where one leg ends and next begins)
+        const legBoundaries = new Set();
+        let cumIdx = 0;
+        rt.legs?.forEach(l => {
+          cumIdx += (l.annotation?.speed?.length || 0);
+          legBoundaries.add(cumIdx);
+        });
+
+        // Split route into segments by road type AND leg boundaries
         const segments = {}; // { typeId: [[coords]] }
         let currentType = roadType(allSpeeds[0]);
         let currentCoords = [coords[0]];
@@ -1133,7 +1141,8 @@ async function fetchRoute() {
         for (let i = 0; i < allSpeeds.length; i++) {
           const t = roadType(allSpeeds[i]);
           currentCoords.push(coords[i + 1]);
-          if (t.id !== currentType.id || i === allSpeeds.length - 1) {
+          // Break segment on type change, leg boundary, or end of route
+          if (t.id !== currentType.id || legBoundaries.has(i + 1) || i === allSpeeds.length - 1) {
             if (!segments[currentType.id]) segments[currentType.id] = [];
             segments[currentType.id].push([...currentCoords]);
             currentCoords = [coords[i + 1]];
