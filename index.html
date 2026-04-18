@@ -202,7 +202,8 @@
     line-height: 1.2;
     transition: box-shadow 0.1s, transform 0.1s;
   }
-  .cp:hover { box-shadow: 0 3px 14px rgba(0,0,0,.3); z-index: 50 !important; transform: scale(1.05); }
+  .cp:hover, .cp.highlight { box-shadow: 0 3px 14px rgba(0,0,0,.3); z-index: 50 !important; transform: scale(1.05); }
+  .cp.highlight { box-shadow: 0 0 0 3px #d63050, 0 4px 16px rgba(214,48,80,.4); transform: scale(1.2); border-color: #d63050; transition: all 0.2s; }
   .cp.cp-route { border-color: #d63050; background: #fef2f2; }
   .cp .cp-icon { font-size: 11px; flex-shrink: 0; }
   .cp .cp-num { background: #d63050; color: #fff; font-size: 7px; font-weight: 700; border-radius: 7px; padding: 0 4px; line-height: 13px; min-width: 13px; text-align: center; }
@@ -1770,7 +1771,7 @@ function renderList() {
       // Tags
       const tagsHtml = s.t.length ? `<div class="gs-tags">${s.t.map(t => `<span class="tg">${t}</span>`).join('')}</div>` : '';
 
-      h += `<div class="gs">
+      h += `<div class="gs" onmouseenter="highlightPill('${s.id}');map.flyTo({center:[${s.lng},${s.lat}],zoom:Math.max(map.getZoom(),8),duration:600})" onmouseleave="clearHighlight()">
         <div class="gs-head" onclick="flyTo('${s.id}')">
           <div class="gs-num">${i}</div>
           <div class="gs-title">${ci} ${s.n}${favDotsHtml(s.id)}</div>
@@ -2032,6 +2033,15 @@ function placePanel(dotX, dotY, pw, ph, placed, mw, mh) {
   }
   // Fallback: place anyway (at first candidate)
   return { x: dotX + 22, y: dotY - ph/2, w: pw, h: ph };
+}
+
+function highlightPill(spotId) {
+  document.querySelectorAll('#panels-overlay .cp').forEach(el => {
+    el.classList.toggle('highlight', el.dataset.id === spotId);
+  });
+}
+function clearHighlight() {
+  document.querySelectorAll('#panels-overlay .cp.highlight').forEach(el => el.classList.remove('highlight'));
 }
 
 function updatePanels() {
