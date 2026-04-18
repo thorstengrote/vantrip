@@ -225,8 +225,8 @@
   }
   .fav-btn:hover { opacity: 0.7; transform: scale(1.2); }
   .fav-btn.faved { opacity: 1; }
-  .fav-dots { display: inline-flex; gap: 2px; margin-left: 3px; }
-  .fav-dot { width: 14px; height: 14px; border-radius: 50%; font-size: 8px; font-weight: 700; color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+  .fav-dots { display: inline-flex; gap: 2px; margin-left: 3px; flex-shrink: 0; }
+  .fav-dot { width: 14px; height: 14px; border-radius: 50%; font-size: 8px; font-weight: 700; color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
   /* ===== UNIFIED INFO CARD (hover/click) ===== */
   #infocard {
@@ -1635,14 +1635,14 @@ function renderList() {
         const s = S.find(x=>x.id===sid);
         if (!s) continue;
         const ci = CAT[s.cat]?.i || '';
-        const others = favSpots.get(sid)?.filter(x=>x.id!==p.id).map(x=>`<span class="fav-dot" style="background:${x.color}" title="${x.name}">${x.name[0]}</span>`).join('') || '';
+        const allWho = favSpots.get(sid)?.map(x=>`<span class="fav-dot" style="background:${x.color}" title="${x.name}">${x.name[0]}</span>`).join('') || '';
         const thumb = getThumb(s.id);
         const imgEl = thumb
           ? `<img class="card-img" src="${thumb}" alt="" onerror="this.className='card-img-ph';this.innerHTML='${ci}';">`
           : `<div class="card-img-ph">${ci}</div>`;
         h += `<div class="card" onclick="flyTo('${s.id}')" style="border-left:3px solid ${p.color}">
           <div class="card-body">
-            <div class="nm">${ci} ${s.n} ${others ? '<span class="fav-dots">'+others+'</span>' : ''}</div>
+            <div class="nm">${ci} ${s.n} ${allWho ? '<span class="fav-dots">'+allWho+'</span>' : ''}</div>
             <div class="sub">${s.co} \u00b7 ${s.ni} N</div>
             <div class="ds">${s.d}</div>
           </div>
