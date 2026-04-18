@@ -2041,11 +2041,13 @@ function placePanel(dotX, dotY, pw, ph, placed, mw, mh) {
 }
 
 function highlightPill(spotId) {
+  _highlightId = spotId;
   document.querySelectorAll('#panels-overlay .cp').forEach(el => {
     el.classList.toggle('highlight', el.dataset.id === spotId);
   });
 }
 function clearHighlight() {
+  _highlightId = null;
   document.querySelectorAll('#panels-overlay .cp.highlight').forEach(el => el.classList.remove('highlight'));
 }
 
@@ -2113,8 +2115,9 @@ function updatePanels() {
 }
 
 // Hide panels during map movement (dots stay visible), recalculate on stop
+let _highlightId = null;
 map.on('movestart', () => { panelsEl.style.display = 'none'; });
-map.on('moveend', () => { panelsEl.style.display = ''; updatePanels(); });
+map.on('moveend', () => { panelsEl.style.display = ''; updatePanels(); if (_highlightId) highlightPill(_highlightId); });
 
 // Sidebar toggle for tablet
 function toggleSidebar() {
