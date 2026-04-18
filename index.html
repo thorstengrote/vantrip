@@ -408,8 +408,7 @@
   <div id="layer-picker">
     <div class="lp-opt on" onclick="setMapLayer('satellite')"><div class="lp-icon">&#x1F6F0;</div><div class="lp-label">Satellit</div></div>
     <div class="lp-opt" onclick="setMapLayer('outdoor')"><div class="lp-icon">&#x1F3D4;</div><div class="lp-label">Outdoor</div></div>
-    <div class="lp-opt" onclick="setMapLayer('standard')"><div class="lp-icon">&#x1F5FA;</div><div class="lp-label">Standard</div></div>
-    <div class="lp-opt" onclick="setMapLayer('dark')"><div class="lp-icon">&#x1F319;</div><div class="lp-label">Nacht</div></div>
+    <div class="lp-opt" onclick="setMapLayer('standard')"><div class="lp-icon">&#x1F5FA;</div><div class="lp-label">Karte</div></div>
   </div>
   <div id="panels-overlay"><svg id="leader-svg"></svg></div>
 </div>
@@ -900,8 +899,7 @@ setTimeout(() => { if (btn3D._btn) btn3D._btn.classList.add('active'); }, 100);
 const MAP_LAYERS = {
   satellite: { source: 'satellite', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], maxzoom: 18 },
   outdoor: { source: 'osm-topo', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], maxzoom: 17 },
-  standard: { source: 'osm-std', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], maxzoom: 19 },
-  dark: { source: 'carto-dark', tiles: ['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'], maxzoom: 20 },
+  standard: { source: 'carto-voyager', tiles: ['https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'], maxzoom: 20 },
 };
 let activeLayer = 'satellite';
 
@@ -931,7 +929,7 @@ function setMapLayer(id) {
 }
 
 // Layer button opens picker
-const btnLayer = new MapButton('\u{1F5FA}', 'Kartenstil', () => {
+const btnLayer = new MapButton('<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1L1 5l7 4 7-4z" fill="#333" opacity=".7"/><path d="M1 8l7 4 7-4" fill="none" stroke="#333" stroke-width="1.5"/><path d="M1 11l7 4 7-4" fill="none" stroke="#333" stroke-width="1.5"/></svg>', 'Kartenstil', () => {
   document.getElementById('layer-picker').classList.toggle('open');
 });
 btnLayer._btn = null;
