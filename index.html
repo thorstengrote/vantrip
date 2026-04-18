@@ -199,6 +199,21 @@
   .map-btn:hover { background: #f0f0f0; }
   .map-btn.active { background: #e8f4fd; color: #0078d4; }
 
+  #layer-picker {
+    display: none; position: absolute; right: 50px; top: 10px; z-index: 6;
+    background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    padding: 8px; gap: 6px;
+  }
+  #layer-picker.open { display: grid; grid-template-columns: 1fr 1fr; }
+  .lp-opt {
+    width: 80px; padding: 8px 4px; border: 2px solid #e0e3e8; border-radius: 8px;
+    background: #fff; cursor: pointer; text-align: center; transition: all 0.1s;
+  }
+  .lp-opt:hover { border-color: #999; }
+  .lp-opt.on { border-color: #d63050; background: #fef2f2; }
+  .lp-opt .lp-icon { font-size: 20px; }
+  .lp-opt .lp-label { font-size: 9px; font-weight: 600; color: #374151; margin-top: 2px; }
+
   /* ===== CLUSTER PANELS + LEADER LINES ===== */
   #panels-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
   #panels-overlay svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -390,6 +405,12 @@
 </div>
 <div id="map" style="position:relative">
   <button id="sidebar-toggle" onclick="toggleSidebar()" title="Sidebar ein/ausblenden">&#9776;</button>
+  <div id="layer-picker">
+    <div class="lp-opt on" onclick="setMapLayer('satellite')"><div class="lp-icon">&#x1F6F0;</div><div class="lp-label">Satellit</div></div>
+    <div class="lp-opt" onclick="setMapLayer('outdoor')"><div class="lp-icon">&#x1F3D4;</div><div class="lp-label">Outdoor</div></div>
+    <div class="lp-opt" onclick="setMapLayer('standard')"><div class="lp-icon">&#x1F5FA;</div><div class="lp-label">Standard</div></div>
+    <div class="lp-opt" onclick="setMapLayer('dark')"><div class="lp-icon">&#x1F319;</div><div class="lp-label">Nacht</div></div>
+  </div>
   <div id="panels-overlay"><svg id="leader-svg"></svg></div>
 </div>
 <div id="infocard"><div id="ic-carousel"></div><div id="ic-body"></div></div>
@@ -828,19 +849,18 @@ let rLines = [], rLegs = [], rLoading = false;
 // MAP (MapLibre GL JS — 3D terrain)
 // ============================================================
 // Base styles
-const STYLE_OUTDOOR = {
-  version: 8, name: 'Outdoor',
+const STYLE_INIT = {
+  version: 8, name: 'VanTrip',
   sources: {
-    'osm-topo': { type: 'raster', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 17, attribution: 'OpenTopoMap' },
     'satellite': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 18, attribution: 'Esri' }
   },
   layers: [
-    { id: 'satellite-base', type: 'raster', source: 'satellite' }
+    { id: 'base-satellite', type: 'raster', source: 'satellite' }
   ]
 };
 const map = new maplibregl.Map({
   container: 'map',
-  style: STYLE_OUTDOOR,
+  style: STYLE_INIT,
   center: [23.5, 44],
   zoom: 5.5,
   pitch: 45,
@@ -848,7 +868,9 @@ const map = new maplibregl.Map({
   bearing: 0,
   antialias: true,
 });
-map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }));
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showCompass: false }));
+map.dragRotate.disable();
+map.touchZoomRotate.disableRotation();
 
 // Custom controls: 3D toggle + Satellite toggle
 class MapButton {
@@ -874,35 +896,53 @@ map.addControl(btn3D, 'top-right');
 // Set initial state
 setTimeout(() => { if (btn3D._btn) btn3D._btn.classList.add('active'); }, 100);
 
-let isSatellite = true; // satellite is default
-const btnSat = new MapButton('\u{1F5FA}', 'Karte: Satellit / Outdoor', () => {
-  isSatellite = !isSatellite;
-  const layers = map.getStyle().layers;
-  if (isSatellite) {
-    // Switch to satellite: show satellite layer, hide topo
-    if (map.getLayer('topo-layer')) map.removeLayer('topo-layer');
-    if (!map.getLayer('satellite-base')) {
-      map.addLayer({ id: 'satellite-base', type: 'raster', source: 'satellite' }, layers.find(l=>l.type!=='raster')?.id);
-    } else {
-      map.setLayoutProperty('satellite-base', 'visibility', 'visible');
+// Layer picker
+const MAP_LAYERS = {
+  satellite: { source: 'satellite', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], maxzoom: 18 },
+  outdoor: { source: 'osm-topo', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], maxzoom: 17 },
+  standard: { source: 'osm-std', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], maxzoom: 19 },
+  dark: { source: 'carto-dark', tiles: ['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'], maxzoom: 20 },
+};
+let activeLayer = 'satellite';
+
+function setMapLayer(id) {
+  const cfg = MAP_LAYERS[id];
+  if (!cfg) return;
+  // Ensure source exists
+  if (!map.getSource(cfg.source)) {
+    map.addSource(cfg.source, { type: 'raster', tiles: cfg.tiles, tileSize: 256, maxzoom: cfg.maxzoom });
+  }
+  // Hide all base layers, show selected
+  for (const [k, v] of Object.entries(MAP_LAYERS)) {
+    const layerId = 'base-' + k;
+    if (!map.getLayer(layerId) && k === id) {
+      // Find first non-raster layer to insert before
+      const above = map.getStyle().layers.find(l => l.type !== 'raster' && !l.id.startsWith('base-'));
+      map.addLayer({ id: layerId, type: 'raster', source: v.source }, above?.id);
     }
-    btnSat._btn.textContent = '\u{1F5FA}';
-    btnSat._btn.classList.remove('active');
-  } else {
-    // Switch to outdoor topo: hide satellite, show topo
-    if (map.getLayer('satellite-base')) map.setLayoutProperty('satellite-base', 'visibility', 'none');
-    if (!map.getSource('osm-topo')) {
-      map.addSource('osm-topo', { type: 'raster', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 17 });
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, 'visibility', k === id ? 'visible' : 'none');
     }
-    if (!map.getLayer('topo-layer')) {
-      map.addLayer({ id: 'topo-layer', type: 'raster', source: 'osm-topo' }, layers.find(l=>l.type!=='raster')?.id);
-    }
-    btnSat._btn.textContent = '\u{1F6F0}';
-    btnSat._btn.classList.add('active');
+  }
+  activeLayer = id;
+  // Update picker UI
+  document.querySelectorAll('.lp-opt').forEach(el => el.classList.toggle('on', el.onclick.toString().includes(id)));
+  document.getElementById('layer-picker').classList.remove('open');
+}
+
+// Layer button opens picker
+const btnLayer = new MapButton('\u{1F5FA}', 'Kartenstil', () => {
+  document.getElementById('layer-picker').classList.toggle('open');
+});
+btnLayer._btn = null;
+map.addControl(btnLayer, 'top-right');
+
+// Close picker when clicking elsewhere
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#layer-picker') && !e.target.closest('.map-btn')) {
+    document.getElementById('layer-picker').classList.remove('open');
   }
 });
-btnSat._btn = null;
-map.addControl(btnSat, 'top-right');
 
 // Add 3D terrain when map loads
 map.on('load', () => {
