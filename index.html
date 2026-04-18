@@ -1191,11 +1191,12 @@ function tempColor(at) {
 const infocard = document.getElementById('infocard');
 const icCarousel = document.getElementById('ic-carousel');
 const icBody = document.getElementById('ic-body');
-let icSpotId = null, icHideTimer = null;
+let icSpotId = null, icHideTimer = null, icPinned = false;
 
-function showInfoCard(s, x, y) {
+function showInfoCard(s, x, y, pin) {
   clearTimeout(icHideTimer);
-  if (icSpotId === s.id && infocard.style.display === 'block') return; // already showing
+  if (pin) icPinned = true;
+  if (icSpotId === s.id && infocard.style.display === 'block' && !pin) return;
   icSpotId = s.id;
   const on = isSel(s.id);
   const ci = CAT[s.cat]?.i || '';
@@ -1225,7 +1226,11 @@ function showInfoCard(s, x, y) {
   const metricsHtml = mParts.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:11px">${mParts.map(m=>`<span style="background:#f3f4f6;padding:2px 7px;border-radius:6px;color:#374151">${m}</span>`).join('')}</div>` : '';
 
   icBody.innerHTML = `
-    <div class="ptitle" style="display:flex;align-items:center;gap:4px"><span style="flex:1">${ci} ${s.n}</span>${favBtnHtml(s.id)}${favDotsHtml(s.id)}</div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <div class="ptitle" style="flex:1">${ci} ${s.n}</div>
+      ${favBtnHtml(s.id)}${favDotsHtml(s.id)}
+      <button onclick="closeInfoCard()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#9ca3af;padding:0 2px;line-height:1">&times;</button>
+    </div>
     <div class="pcat">${s.co} \u00b7 ${CAT[s.cat]?.l}</div>
     ${metricsHtml}
     <div class="pdesc">${GUIDE[s.id] || s.d}</div>
@@ -1251,6 +1256,7 @@ function showInfoCard(s, x, y) {
 }
 
 function hideInfoCard() {
+  if (icPinned) return; // don't hide pinned cards
   icHideTimer = setTimeout(() => {
     if (!infocard.matches(':hover')) {
       infocard.style.display = 'none';
@@ -1259,8 +1265,14 @@ function hideInfoCard() {
   }, 150);
 }
 
+function closeInfoCard() {
+  icPinned = false;
+  infocard.style.display = 'none';
+  icSpotId = null;
+}
+
 infocard.addEventListener('mouseenter', () => clearTimeout(icHideTimer));
-infocard.addEventListener('mouseleave', () => hideInfoCard());
+infocard.addEventListener('mouseleave', () => { if (!icPinned) hideInfoCard(); });
 
 function isSel(id) { return sel.includes(id); }
 function toggle(id) {
@@ -1786,7 +1798,7 @@ function renderList() {
         const imgCount2 = getImgs(s.id).length;
         const wcTag2 = s.wc ? '<span class="tg wc">WC</span>' : '';
         const foodTag2 = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
-        h += `<div class="card ${on2?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){highlightPill('${s.id}');var sp=S.find(function(x){return x.id==='${s.id}'});if(!sp)return;map.flyTo({center:[sp.lng,sp.lat],zoom:7,duration:800,curve:1.5});setTimeout(function(){var pp=map.project([sp.lng,sp.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(sp,mr.left+pp.x+15,mr.top+pp.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()" style="border-left:3px solid ${p.color}">
+        h += `<div class="card ${on2?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){icPinned=false;highlightPill('${s.id}');var sp=S.find(function(x){return x.id==='${s.id}'});if(!sp)return;map.flyTo({center:[sp.lng,sp.lat],zoom:7,duration:800,curve:1.5});setTimeout(function(){var pp=map.project([sp.lng,sp.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(sp,mr.left+pp.x+15,mr.top+pp.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()" style="border-left:3px solid ${p.color}">
           <div class="card-body">
             <div class="nm">${ci} ${s.n} ${allWho ? '<span class="fav-dots">'+allWho+'</span>' : ''}</div>
             <div class="sub">${s.co} \u00b7 ${s.ni} N${imgCount2>1?' \u00b7 '+imgCount2+' Fotos':''}</div>
@@ -1914,7 +1926,7 @@ function renderList() {
       // Tags
       const tagsHtml = s.t.length ? `<div class="gs-tags">${s.t.map(t => `<span class="tg">${t}</span>`).join('')}</div>` : '';
 
-      h += `<div class="gs" onmouseenter="highlightPill('${s.id}');map.flyTo({center:[${s.lng},${s.lat}],zoom:7,duration:800,curve:1.5})" onmouseleave="clearHighlight()">
+      h += `<div class="gs" onmouseenter="icPinned=false;highlightPill('${s.id}');map.flyTo({center:[${s.lng},${s.lat}],zoom:7,duration:800,curve:1.5})" onmouseleave="clearHighlight()">
         <div class="gs-head" onclick="flyTo('${s.id}')">
           <div class="gs-num">${i}</div>
           <div class="gs-title">${ci} ${s.n}${favDotsHtml(s.id)}</div>
@@ -1952,7 +1964,7 @@ function renderList() {
     const wcTag = s.wc ? '<span class="tg wc">WC</span>' : '';
     const foodTag = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
     const routeBtn = s.id===homeId() ? '' : `<button class="card-route-btn ${on?'on-route':''}" onclick="event.stopPropagation();toggle('${s.id}')" title="${on?'Von Route entfernen':'Zur Route'}">${on?'\u2713':'+'}</button>`;
-    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){highlightPill('${s.id}');var s=S.find(function(x){return x.id==='${s.id}'});if(!s)return;map.flyTo({center:[s.lng,s.lat],zoom:7,duration:800,curve:1.5});setTimeout(function(){var p=map.project([s.lng,s.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(s,mr.left+p.x+15,mr.top+p.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()">
+    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){icPinned=false;highlightPill('${s.id}');var s=S.find(function(x){return x.id==='${s.id}'});if(!s)return;map.flyTo({center:[s.lng,s.lat],zoom:7,duration:800,curve:1.5});setTimeout(function(){var p=map.project([s.lng,s.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(s,mr.left+p.x+15,mr.top+p.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()">
       ${on?`<div class="rn">${ri+1}</div>`:''}
       <div class="card-body">
         <div class="nm">${CAT[s.cat]?.i||''} ${s.n}${favDotsHtml(s.id)}</div>
@@ -2054,14 +2066,14 @@ function addSpotsLayers() {
   dotLayers.forEach(layer => {
     map.on('mouseenter', layer, (e) => {
       map.getCanvas().style.cursor = 'pointer';
-      if (!hoverEnabled) return;
+      if (!hoverEnabled || icPinned) return;
       const f = e.features[0];
       const s = S.find(x => x.id === f.properties.id);
       if (s) showInfoCard(s, e.originalEvent.clientX, e.originalEvent.clientY);
     });
     map.on('mouseleave', layer, () => {
       map.getCanvas().style.cursor = '';
-      if (hoverEnabled) hideInfoCard();
+      if (hoverEnabled && !icPinned) hideInfoCard();
     });
     map.on('click', layer, (e) => {
       const f = e.features[0];
@@ -2241,7 +2253,7 @@ function updatePanels() {
   // Event handlers — panels show unified info card
   panelsEl.querySelectorAll('.cp').forEach(el => {
     el.addEventListener('mouseenter', (e) => {
-      if (!hoverEnabled) return;
+      if (!hoverEnabled || icPinned) return;
       const s = S.find(x => x.id === el.dataset.id);
       if (s) showInfoCard(s, e.clientX, e.clientY);
     });
@@ -2303,8 +2315,9 @@ function flyTo(id) {
   const s=S.find(x=>x.id===id); if(!s) return;
   // On mobile, switch to map view first
   if (window.innerWidth < 768) mobileView('map');
+  icPinned = false;
   map.flyTo({center:[s.lng,s.lat],zoom:11,duration:1200,pitch:50});
-  setTimeout(()=>{ const p=map.project([s.lng,s.lat]); showInfoCard(s, p.x+400, p.y+100); },1300);
+  setTimeout(()=>{ const p=map.project([s.lng,s.lat]); showInfoCard(s, p.x+400, p.y+100, true); },1300);
 }
 function exportRoute() {
   const pts=sel.map(id=>S.find(s=>s.id===id)).filter(Boolean);
