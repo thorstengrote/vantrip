@@ -1017,14 +1017,22 @@ async function fetchOsmTags(lat, lng) {
   // 2. Firebase cache
   try {
     const snap = await db.ref('osm-cache/'+key).once('value');
-    if (snap.val()) { osmLocalCache[key] = snap.val(); return snap.val(); }
+    const cached = snap.val();
+    if (cached && !cached._error) { osmLocalCache[key] = cached; return cached; }
   } catch(e) {}
   // 3. Overpass API
   try {
     const q = `[out:json][timeout:8];way(around:100,${lat},${lng})[highway];out tags 1;`;
     const res = await fetch('https://overpass-api.de/api/interpreter', {method:'POST', body:'data='+encodeURIComponent(q)});
+    if (!res.ok) { osmLocalCache[key] = {_error:'api_' + res.status}; return osmLocalCache[key]; }
     const data = await res.json();
-    const way = data.elements?.[0]?.tags || {};
+    const way = data.elements?.[0]?.tags || null;
+    if (!way) {
+      const result = {_empty: true}; // OSM has no data here
+      osmLocalCache[key] = result;
+      try { db.ref('osm-cache/'+key).set(result); } catch(e) {}
+      return result;
+    }
     const tags = {};
     for (const k of ['surface','smoothness','width','tracktype','incline','maxweight','highway','lanes','name']) {
       if (way[k]) tags[k] = way[k];
@@ -1032,11 +1040,18 @@ async function fetchOsmTags(lat, lng) {
     osmLocalCache[key] = tags;
     try { db.ref('osm-cache/'+key).set(tags); } catch(e) {}
     return tags;
-  } catch(e) { return {}; }
+  } catch(e) {
+    osmLocalCache[key] = {_error: 'timeout'};
+    return osmLocalCache[key];
+  }
 }
 
 function osmTagsHtml(tags) {
-  if (!tags || !Object.keys(tags).length) return '<div style="font-size:10px;color:#9ca3af">Keine OSM-Details verfügbar</div>';
+  if (!tags) return '<div style="font-size:10px;color:#9ca3af">\u26A0 Fehler beim Laden</div>';
+  if (tags._error === 'timeout') return '<div style="font-size:10px;color:#e67e22">\u23F1 Timeout \u2013 <a style="color:#2563eb;cursor:pointer" onclick="this.parentElement.innerHTML=\'Lade...\';osmLocalCache={};this.closest(\'.maplibregl-popup\')?.remove()">nochmal versuchen</a></div>';
+  if (tags._error) return '<div style="font-size:10px;color:#e67e22">\u26A0 API-Fehler ('+tags._error+')</div>';
+  if (tags._empty) return '<div style="font-size:10px;color:#9ca3af">Keine Details in OSM hinterlegt</div>';
+  if (!Object.keys(tags).length) return '<div style="font-size:10px;color:#9ca3af">Keine Details in OSM hinterlegt</div>';
   const labels = {
     surface: {l:'Belag', v:{'asphalt':'Asphalt','paved':'Befestigt','gravel':'Schotter','dirt':'Erde','sand':'Sand','cobblestone':'Kopfstein','concrete':'Beton','compacted':'Verdichtet','unpaved':'Unbefestigt','fine_gravel':'Feinkies'}},
     smoothness: {l:'Zustand', v:{'excellent':'Sehr gut','good':'Gut','intermediate':'Mittel','bad':'Schlecht','very_bad':'Sehr schlecht','horrible':'Furchtbar'}},
