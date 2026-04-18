@@ -1057,34 +1057,20 @@ function osmTagsHtml(tags) {
 }
 
 function showSegmentPopup(e, rt) {
-  const speed = rt.id === 'highway' ? '>90' : rt.id === 'main' ? '60-90' : rt.id === 'mountain' ? '35-60' : '<35';
-  // Find matching leg
-  const leg = rLegs.find(l => {
-    const s1 = S.find(x=>x.id===l.from), s2 = S.find(x=>x.id===l.to);
-    if (!s1||!s2) return false;
-    const lat=e.lngLat.lat, lng=e.lngLat.lng;
-    return lat>=Math.min(s1.lat,s2.lat)-0.5 && lat<=Math.max(s1.lat,s2.lat)+0.5 && lng>=Math.min(s1.lng,s2.lng)-0.5 && lng<=Math.max(s1.lng,s2.lng)+0.5;
-  });
-  let legInfo = '';
-  if (leg && leg.pcts) {
-    const pct = leg.pcts[rt.id] || 0;
-    const segKm = Math.round(leg.km * pct / 100);
-    const segMin = Math.round(leg.min * pct / 100);
-    const from = S.find(x=>x.id===leg.from)?.n || leg.from;
-    const to = S.find(x=>x.id===leg.to)?.n || leg.to;
-    legInfo = `<div style="font-size:10px;margin-top:4px;padding-top:4px;border-top:1px solid #eee">
-      <div style="color:#9ca3af;margin-bottom:2px">${from} \u2192 ${to}</div>
-      <div><b>~${segKm} km</b> \u00b7 ~${fmtDur(segMin)} (${pct}% der Strecke)</div>
-      <div style="color:#9ca3af">Gesamt: ${leg.km} km \u00b7 ${fmtDur(leg.min)}</div>
-    </div>`;
-  }
+  const speedRange = rt.id === 'highway' ? '>90' : rt.id === 'main' ? '60-90' : rt.id === 'mountain' ? '35-60' : '<35';
+  const speedMid = rt.id === 'highway' ? 100 : rt.id === 'main' ? 75 : rt.id === 'mountain' ? 47 : 25;
+  // Get distance from the clicked feature
+  const feat = e.features?.[0];
+  const segKm = feat?.properties?.dist || 0;
+  const segMin = segKm > 0 ? Math.round(segKm / speedMid * 60) : 0;
+  const segInfo = segKm > 0 ? `<div style="font-size:11px;margin-top:4px;padding-top:4px;border-top:1px solid #eee"><b>${segKm} km</b> \u00b7 ~${fmtDur(segMin)} \u00b7 \u00d8 ~${speedMid} km/h</div>` : '';
 
   const popupId = 'seg-popup-' + Date.now();
   const popup = new maplibregl.Popup({maxWidth:'260px'})
     .setLngLat(e.lngLat)
     .setHTML(`<div style="font-size:12px;font-weight:600;color:${rt.color}">${rt.label}</div>
-      <div style="font-size:11px;color:#6b7280">${speed} km/h</div>
-      ${legInfo}
+      <div style="font-size:11px;color:#6b7280">${speedRange} km/h</div>
+      ${segInfo}
       <div id="${popupId}" style="margin-top:6px"><span class="sp"></span> <span style="font-size:10px;color:#9ca3af">Strassendetails laden...</span></div>`)
     .addTo(map);
 
@@ -1161,10 +1147,15 @@ async function fetchRoute() {
           const srcId = 'route-' + rt.id;
           const glowId = 'route-glow-' + rt.id;
           const lineId = 'route-line-' + rt.id;
-          map.addSource(srcId, { type: 'geojson', data: {
-            type: 'FeatureCollection',
-            features: segments[rt.id].map(c => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: c } }))
-          }});
+          // Calculate distance for each segment feature
+          const feats = segments[rt.id].map(c => {
+            let dist = 0;
+            for (let j = 1; j < c.length; j++) {
+              dist += hav(c[j-1][1],c[j-1][0],c[j][1],c[j][0]);
+            }
+            return { type:'Feature', properties:{dist:Math.round(dist),type:rt.id}, geometry:{type:'LineString',coordinates:c} };
+          });
+          map.addSource(srcId, { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
           // Glow = wide hit area (clickable) + visual glow
           map.addLayer({ id: glowId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': 22, 'line-opacity': 0.08 } });
           map.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': rt.width, 'line-opacity': 0.85 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
