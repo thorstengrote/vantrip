@@ -226,7 +226,7 @@
   .fav-btn:hover { opacity: 0.7; transform: scale(1.2); }
   .fav-btn.faved { opacity: 1; }
   .fav-dots { display: inline-flex; gap: 2px; margin-left: 3px; }
-  .fav-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .fav-dot { width: 14px; height: 14px; border-radius: 50%; font-size: 8px; font-weight: 700; color: #fff; display: inline-flex; align-items: center; justify-content: center; }
 
   /* ===== UNIFIED INFO CARD (hover/click) ===== */
   #infocard {
@@ -1412,8 +1412,17 @@ function saveFavs() {
 }
 function getFavs(tripId, personId) { return allFavs[tripId]?.[personId] || []; }
 function isFav(spotId) { return activePerson && getFavs(activeTrip, activePerson).includes(spotId); }
+let favConfirmedThisSession = false;
 function toggleFav(spotId) {
-  if (!activePerson) { showPersonPicker(); return; }
+  if (!activePerson) { pendingFavSpot = spotId; showPersonPicker(); return; }
+  if (!favConfirmedThisSession) {
+    pendingFavSpot = spotId;
+    showPersonConfirm();
+    return;
+  }
+  doToggleFav(spotId);
+}
+function doToggleFav(spotId) {
   if (!allFavs[activeTrip]) allFavs[activeTrip] = {};
   if (!allFavs[activeTrip][activePerson]) allFavs[activeTrip][activePerson] = [];
   const arr = allFavs[activeTrip][activePerson];
@@ -1421,10 +1430,26 @@ function toggleFav(spotId) {
   if (idx >= 0) arr.splice(idx, 1); else arr.push(spotId);
   saveFavs();
 }
+let pendingFavSpot = null;
+function showPersonConfirm() {
+  const p = TRIP_PEOPLE[activeTrip]?.find(x=>x.id===activePerson);
+  if (!p) { showPersonPicker(); return; }
+  document.getElementById('person-modal').innerHTML = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:280px;box-shadow:0 8px 40px rgba(0,0,0,.3);text-align:center">
+        <div style="font-size:15px;font-weight:700;margin-bottom:12px;color:#1a1a2e">Bist du ${p.name}?</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button onclick="favConfirmedThisSession=true;document.getElementById('person-modal').style.display='none';if(pendingFavSpot)doToggleFav(pendingFavSpot);pendingFavSpot=null" style="padding:10px 24px;background:${p.color};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Ja, ${p.name}</button>
+          <button onclick="document.getElementById('person-modal').style.display='none';pendingFavSpot=null;showPersonPicker()" style="padding:10px 16px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer">Nein</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('person-modal').style.display = 'block';
+}
 function favDotsHtml(spotId) {
   const people = TRIP_PEOPLE[activeTrip] || [];
   const dots = people.filter(p => getFavs(activeTrip, p.id).includes(spotId))
-    .map(p => `<span class="fav-dot" style="background:${p.color}" title="${p.name}"></span>`);
+    .map(p => `<span class="fav-dot" style="background:${p.color}" title="${p.name}">${p.name[0]}</span>`);
   return dots.length ? `<span class="fav-dots">${dots.join('')}</span>` : '';
 }
 function favBtnHtml(spotId) {
@@ -1439,9 +1464,12 @@ function renderPersonBar() {
 }
 function setPerson(id) {
   activePerson = id;
+  favConfirmedThisSession = true;
   localStorage.setItem('vt-person', id);
   renderPersonBar();
   render();
+  // Execute pending fav if any
+  if (pendingFavSpot) { doToggleFav(pendingFavSpot); pendingFavSpot = null; }
 }
 // Person picker dialog — shown on first visit or when setting fav without person
 function showPersonPicker() {
