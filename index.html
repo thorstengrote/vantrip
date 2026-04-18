@@ -895,36 +895,70 @@ map.addControl(btn3D, 'top-right');
 // Set initial state
 setTimeout(() => { if (btn3D._btn) btn3D._btn.classList.add('active'); }, 100);
 
-// Layer picker
-const MAP_LAYERS = {
-  satellite: { source: 'satellite', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], maxzoom: 18 },
-  outdoor: { source: 'osm-topo', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], maxzoom: 17 },
-  standard: { source: 'carto-voyager', tiles: ['https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'], maxzoom: 20 },
+// Layer/Style system
+const STYLES = {
+  satellite: null, // custom raster style (initial)
+  standard: 'https://tiles.openfreemap.org/styles/liberty',
+  outdoor: 'https://tiles.openfreemap.org/styles/liberty', // + hillshade
 };
 let activeLayer = 'satellite';
 
+function addCustomLayers() {
+  // Terrain
+  if (!map.getSource('terrain-dem')) {
+    map.addSource('terrain-dem', {
+      type: 'raster-dem',
+      tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+      encoding: 'terrarium', tileSize: 256, maxzoom: 15,
+    });
+  }
+  map.setTerrain({ source: 'terrain-dem', exaggeration: 1.8 });
+  if (!map.getLayer('sky')) {
+    map.addLayer({ id: 'sky', type: 'sky', paint: { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0.0, 0.0], 'sky-atmosphere-sun-intensity': 15 } });
+  }
+  // Hillshade for outdoor mode
+  if (activeLayer === 'outdoor') {
+    if (!map.getSource('hillshade-dem')) {
+      map.addSource('hillshade-dem', {
+        type: 'raster-dem',
+        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+        encoding: 'terrarium', tileSize: 256, maxzoom: 15,
+      });
+    }
+    if (!map.getLayer('hillshade-layer')) {
+      map.addLayer({ id: 'hillshade-layer', type: 'hillshade', source: 'hillshade-dem',
+        paint: { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': '#473B24', 'hillshade-illumination-anchor': 'map' }
+      }, map.getStyle().layers.find(l => l.type === 'symbol')?.id);
+    }
+  }
+  // Re-add spots layers
+  spotsLayersAdded = false;
+  try { addSpotsLayers(); renderMarkers(); } catch(e) { console.error('addCustomLayers:', e); }
+  setTimeout(updatePanels, 200);
+}
+
 function setMapLayer(id) {
-  const cfg = MAP_LAYERS[id];
-  if (!cfg) return;
-  // Ensure source exists
-  if (!map.getSource(cfg.source)) {
-    map.addSource(cfg.source, { type: 'raster', tiles: cfg.tiles, tileSize: 256, maxzoom: cfg.maxzoom });
-  }
-  // Hide all base layers, show selected
-  for (const [k, v] of Object.entries(MAP_LAYERS)) {
-    const layerId = 'base-' + k;
-    if (!map.getLayer(layerId) && k === id) {
-      // Find first non-raster layer to insert before
-      const above = map.getStyle().layers.find(l => l.type !== 'raster' && !l.id.startsWith('base-'));
-      map.addLayer({ id: layerId, type: 'raster', source: v.source }, above?.id);
-    }
-    if (map.getLayer(layerId)) {
-      map.setLayoutProperty(layerId, 'visibility', k === id ? 'visible' : 'none');
-    }
-  }
+  if (id === activeLayer) { document.getElementById('layer-picker').classList.remove('open'); return; }
+  const prevCenter = map.getCenter(), prevZoom = map.getZoom(), prevPitch = map.getPitch();
   activeLayer = id;
+
+  if (id === 'satellite') {
+    // Switch to raster satellite
+    map.setStyle(STYLE_INIT);
+  } else {
+    // Switch to vector style
+    map.setStyle(STYLES[id]);
+  }
+
+  map.once('style.load', () => {
+    map.setCenter(prevCenter); map.setZoom(prevZoom); map.setPitch(prevPitch);
+    addCustomLayers();
+    // Re-request route
+    reqRoute();
+  });
+
   // Update picker UI
-  document.querySelectorAll('.lp-opt').forEach(el => el.classList.toggle('on', el.onclick.toString().includes(id)));
+  document.querySelectorAll('.lp-opt').forEach(el => el.classList.toggle('on', el.onclick.toString().includes("'" + id + "'")));
   document.getElementById('layer-picker').classList.remove('open');
 }
 
@@ -942,29 +976,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Add 3D terrain when map loads
-map.on('load', () => {
-  map.addSource('terrain-dem', {
-    type: 'raster-dem',
-    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-    encoding: 'terrarium',
-    tileSize: 256,
-    maxzoom: 15,
-  });
-  map.setTerrain({ source: 'terrain-dem', exaggeration: 1.8 });
-
-  // Sky layer for nicer 3D feel
-  map.addLayer({
-    id: 'sky', type: 'sky', paint: {
-      'sky-type': 'atmosphere',
-      'sky-atmosphere-sun': [0.0, 0.0],
-      'sky-atmosphere-sun-intensity': 15,
-    }
-  });
-
-  // Add spots layers (dots + labels with collision detection)
-  try { addSpotsLayers(); renderMarkers(); } catch(e) { console.error('addSpotsLayers error:', e); }
-});
+// Initial map load
+map.on('load', () => { addCustomLayers(); });
 
 // ============================================================
 // ROUTING (OSRM) — MapLibre version
