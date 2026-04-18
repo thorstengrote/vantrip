@@ -2118,8 +2118,8 @@ function updatePanels() {
 
 // Hide panels during map movement (dots stay visible), recalculate on stop
 let _highlightId = null;
-map.on('movestart', () => { panelsEl.style.display = 'none'; });
-map.on('moveend', () => { panelsEl.style.display = ''; updatePanels(); if (_highlightId) highlightPill(_highlightId); });
+map.on('movestart', () => { panelsEl.style.opacity = '0.3'; panelsEl.style.pointerEvents = 'none'; });
+map.on('moveend', () => { panelsEl.style.opacity = '1'; panelsEl.style.pointerEvents = ''; updatePanels(); if (_highlightId) highlightPill(_highlightId); });
 
 // Sidebar toggle for tablet
 function toggleSidebar() {
