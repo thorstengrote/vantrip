@@ -1225,12 +1225,17 @@ function showInfoCard(s, x, y, pin) {
   else if (s.net === 1) mParts.push('\u{1F4F6} Netz l\u00fcckenhaft');
   const metricsHtml = mParts.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:11px">${mParts.map(m=>`<span style="background:#f3f4f6;padding:2px 7px;border-radius:6px;color:#374151">${m}</span>`).join('')}</div>` : '';
 
+  // X button on top of entire card (over carousel)
+  infocard.querySelector('.ic-close')?.remove();
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'ic-close';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.onclick = closeInfoCard;
+  Object.assign(closeBtn.style, {position:'absolute',top:'6px',right:'6px',zIndex:'10',background:'rgba(0,0,0,0.5)',color:'#fff',border:'none',borderRadius:'50%',width:'26px',height:'26px',fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'});
+  infocard.appendChild(closeBtn);
+
   icBody.innerHTML = `
-    <div style="display:flex;align-items:center;gap:4px">
-      <div class="ptitle" style="flex:1">${ci} ${s.n}</div>
-      ${favBtnHtml(s.id)}${favDotsHtml(s.id)}
-      <button onclick="closeInfoCard()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#9ca3af;padding:0 2px;line-height:1">&times;</button>
-    </div>
+    <div class="ptitle" style="display:flex;align-items:center;gap:4px"><span style="flex:1">${ci} ${s.n}</span>${favBtnHtml(s.id)}${favDotsHtml(s.id)}</div>
     <div class="pcat">${s.co} \u00b7 ${CAT[s.cat]?.l}</div>
     ${metricsHtml}
     <div class="pdesc">${GUIDE[s.id] || s.d}</div>
