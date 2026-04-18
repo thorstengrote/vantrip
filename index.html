@@ -827,9 +827,20 @@ let rLines = [], rLegs = [], rLoading = false;
 // ============================================================
 // MAP (MapLibre GL JS — 3D terrain)
 // ============================================================
+// Base styles
+const STYLE_OUTDOOR = {
+  version: 8, name: 'Outdoor',
+  sources: {
+    'osm-topo': { type: 'raster', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 17, attribution: 'OpenTopoMap' },
+    'satellite': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 18, attribution: 'Esri' }
+  },
+  layers: [
+    { id: 'satellite-base', type: 'raster', source: 'satellite' }
+  ]
+};
 const map = new maplibregl.Map({
   container: 'map',
-  style: 'https://tiles.openfreemap.org/styles/liberty',
+  style: STYLE_OUTDOOR,
   center: [23.5, 44],
   zoom: 5.5,
   pitch: 45,
@@ -863,27 +874,32 @@ map.addControl(btn3D, 'top-right');
 // Set initial state
 setTimeout(() => { if (btn3D._btn) btn3D._btn.classList.add('active'); }, 100);
 
-let satVisible = false;
-const btnSat = new MapButton('\u{1F6F0}', 'Satellit Ein/Aus', () => {
-  satVisible = !satVisible;
-  if (satVisible) {
-    if (!map.getSource('satellite')) {
-      map.addSource('satellite', {
-        type: 'raster',
-        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-        tileSize: 256, maxzoom: 18,
-        attribution: 'Esri World Imagery'
-      });
+let isSatellite = true; // satellite is default
+const btnSat = new MapButton('\u{1F5FA}', 'Karte: Satellit / Outdoor', () => {
+  isSatellite = !isSatellite;
+  const layers = map.getStyle().layers;
+  if (isSatellite) {
+    // Switch to satellite: show satellite layer, hide topo
+    if (map.getLayer('topo-layer')) map.removeLayer('topo-layer');
+    if (!map.getLayer('satellite-base')) {
+      map.addLayer({ id: 'satellite-base', type: 'raster', source: 'satellite' }, layers.find(l=>l.type!=='raster')?.id);
+    } else {
+      map.setLayoutProperty('satellite-base', 'visibility', 'visible');
     }
-    // Insert satellite below the first symbol layer (so labels stay on top)
-    const layers = map.getStyle().layers;
-    const firstSymbol = layers.find(l => l.type === 'symbol');
-    map.addLayer({ id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 0.85 } },
-      firstSymbol ? firstSymbol.id : undefined);
+    btnSat._btn.textContent = '\u{1F5FA}';
+    btnSat._btn.classList.remove('active');
   } else {
-    if (map.getLayer('satellite-layer')) map.removeLayer('satellite-layer');
+    // Switch to outdoor topo: hide satellite, show topo
+    if (map.getLayer('satellite-base')) map.setLayoutProperty('satellite-base', 'visibility', 'none');
+    if (!map.getSource('osm-topo')) {
+      map.addSource('osm-topo', { type: 'raster', tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 17 });
+    }
+    if (!map.getLayer('topo-layer')) {
+      map.addLayer({ id: 'topo-layer', type: 'raster', source: 'osm-topo' }, layers.find(l=>l.type!=='raster')?.id);
+    }
+    btnSat._btn.textContent = '\u{1F6F0}';
+    btnSat._btn.classList.add('active');
   }
-  btnSat._btn.classList.toggle('active', satVisible);
 });
 btnSat._btn = null;
 map.addControl(btnSat, 'top-right');
