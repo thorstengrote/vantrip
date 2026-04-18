@@ -1644,14 +1644,19 @@ function renderList() {
         const imgEl = thumb
           ? `<img class="card-img" src="${thumb}" alt="" onerror="this.className='card-img-ph';this.innerHTML='${ci}';">`
           : `<div class="card-img-ph">${ci}</div>`;
-        h += `<div class="card" onclick="flyTo('${s.id}')" style="border-left:3px solid ${p.color}">
+        const on2 = isSel(s.id);
+        const imgCount2 = getImgs(s.id).length;
+        const wcTag2 = s.wc ? '<span class="tg wc">WC</span>' : '';
+        const foodTag2 = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
+        h += `<div class="card ${on2?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){var sp=S.find(function(x){return x.id==='${s.id}'});if(!sp)return;map.flyTo({center:[sp.lng,sp.lat],zoom:Math.max(map.getZoom(),9),duration:800});setTimeout(function(){var pp=map.project([sp.lng,sp.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(sp,mr.left+pp.x+15,mr.top+pp.y-20)},850)})()" onmouseleave="hideInfoCard()" style="border-left:3px solid ${p.color}">
           <div class="card-body">
             <div class="nm">${ci} ${s.n} ${allWho ? '<span class="fav-dots">'+allWho+'</span>' : ''}</div>
-            <div class="sub">${s.co} \u00b7 ${s.ni} N</div>
+            <div class="sub">${s.co} \u00b7 ${s.ni} N${imgCount2>1?' \u00b7 '+imgCount2+' Fotos':''}</div>
             <div class="ds">${s.d}</div>
+            <div class="tgs">${foodTag2}${wcTag2}${s.t.slice(0,4).map(t=>\`<span class="tg">\${t}</span>\`).join('')}</div>
           </div>
           ${imgEl}
-          ${favBtnHtml(s.id)}
+          <div style="position:absolute;right:10px;top:8px">${favBtnHtml(s.id)}</div>
         </div>`;
       }
     }
