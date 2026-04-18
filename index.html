@@ -1021,7 +1021,7 @@ async function fetchOsmTags(lat, lng) {
   } catch(e) {}
   // 3. Overpass API
   try {
-    const q = `[out:json][timeout:5];way(around:30,${lat},${lng})[highway];out tags 1;`;
+    const q = `[out:json][timeout:5];way(around:50,${lat},${lng})[highway];out tags 1;`;
     const res = await fetch('https://overpass-api.de/api/interpreter', {method:'POST', body:'data='+encodeURIComponent(q)});
     const data = await res.json();
     const way = data.elements?.[0]?.tags || {};
@@ -1065,7 +1065,19 @@ function showSegmentPopup(e, rt) {
     const lat=e.lngLat.lat, lng=e.lngLat.lng;
     return lat>=Math.min(s1.lat,s2.lat)-0.5 && lat<=Math.max(s1.lat,s2.lat)+0.5 && lng>=Math.min(s1.lng,s2.lng)-0.5 && lng<=Math.max(s1.lng,s2.lng)+0.5;
   });
-  const legInfo = leg ? `<div style="font-size:10px;margin-top:4px;padding-top:4px;border-top:1px solid #eee"><b>${leg.km} km</b> \u00b7 ${fmtDur(leg.min)} \u00b7 \u00d8 ${leg.avgSpeed||'?'} km/h</div>` : '';
+  let legInfo = '';
+  if (leg && leg.pcts) {
+    const pct = leg.pcts[rt.id] || 0;
+    const segKm = Math.round(leg.km * pct / 100);
+    const segMin = Math.round(leg.min * pct / 100);
+    const from = S.find(x=>x.id===leg.from)?.n || leg.from;
+    const to = S.find(x=>x.id===leg.to)?.n || leg.to;
+    legInfo = `<div style="font-size:10px;margin-top:4px;padding-top:4px;border-top:1px solid #eee">
+      <div style="color:#9ca3af;margin-bottom:2px">${from} \u2192 ${to}</div>
+      <div><b>~${segKm} km</b> \u00b7 ~${fmtDur(segMin)} (${pct}% der Strecke)</div>
+      <div style="color:#9ca3af">Gesamt: ${leg.km} km \u00b7 ${fmtDur(leg.min)}</div>
+    </div>`;
+  }
 
   const popupId = 'seg-popup-' + Date.now();
   const popup = new maplibregl.Popup({maxWidth:'260px'})
