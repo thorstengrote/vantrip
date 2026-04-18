@@ -368,7 +368,8 @@
       <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
       <button class="ab ab2" onclick="fitRoute()">Zeig Route</button>
       <button class="ab ab2" onclick="clearRoute()">Leeren</button>
-      <button class="ab ab1" onclick="shareRoute()" id="share-btn">Teilen</button>
+      <button class="ab ab1" onclick="saveRouteToDb()">&#x1F4BE; Speichern</button>
+      <button class="ab ab1" onclick="shareRoute()" id="share-btn">Link teilen</button>
     </div>
   </div>
 </div>
@@ -1657,10 +1658,32 @@ function renderList() {
 
   // Route suggestions tab
   if (tab === 'routes') {
-    el.innerHTML = '<div style="padding:8px 14px;font-size:10px;color:#556">6 optimale Routen ab/bis Bonn. Jede ist ein guter Trip.</div>' +
+    // Saved routes from Firebase
+    const tripSaved = savedRoutes[activeTrip] || {};
+    const savedKeys = Object.keys(tripSaved).sort((a,b) => (tripSaved[b].ts||0) - (tripSaved[a].ts||0));
+    let savedHtml = '';
+    if (savedKeys.length) {
+      savedHtml = '<div style="padding:8px 14px;font-size:11px;font-weight:700;color:#d63050;border-bottom:1px solid #e0e3e8">\u{1F4BE} Gespeicherte Routen</div>' +
+        savedKeys.map(k => {
+          const r = tripSaved[k];
+          const spots = (r.ids||[]).map(id => S.find(s=>s.id===id)?.n || id).join(' \u2192 ');
+          return `<div class="rcard" style="border-left:3px solid #d63050">
+            <div class="rtitle">${r.name}</div>
+            <div class="rsub">von ${r.by} \u00b7 ${(r.ids||[]).length} Stops</div>
+            <div class="rdesc" style="font-size:10px;color:#6b7280">${spots}</div>
+            <div style="display:flex;gap:4px;margin-top:6px">
+              <button class="rbtn" onclick="loadSavedRoute('${activeTrip}','${k}')">Route laden</button>
+              <button class="rbtn" style="background:#6b7280" onclick="deleteSavedRoute('${activeTrip}','${k}')">L\u00f6schen</button>
+            </div>
+          </div>`;
+        }).join('');
+    }
+    // Pre-built suggestions
+    el.innerHTML = savedHtml +
+      '<div style="padding:8px 14px;font-size:11px;font-weight:700;color:#374151;border-bottom:1px solid #e0e3e8">\u{1F4A1} Routen-Vorschl\u00e4ge</div>' +
       ROUTES.map((r,i) => `<div class="rcard">
         <div class="rtitle">${i+1}. ${r.name}</div>
-        <div class="rsub">${r.sub} · ${r.ids.length} Stops</div>
+        <div class="rsub">${r.sub} \u00b7 ${r.ids.length} Stops</div>
         <div class="rdesc">${r.desc}</div>
         <ul class="rpros">${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul>
         <button class="rbtn" onclick="loadRoute(${i})">Route laden</button>
@@ -2131,6 +2154,47 @@ function exportRoute() {
 // Images are pre-baked — show count
 const _t = S.reduce((a,s) => a + (imgCache[s.id]?.length||0), 0);
 document.getElementById('hdr-sub').textContent = `HU + RO + BG + RS + MK | 3 Wochen \u00b7 ${_t} Fotos`;
+
+// ============================================================
+// SAVED ROUTES (Firebase)
+// ============================================================
+let savedRoutes = {};
+db.ref('routes').on('value', snap => {
+  savedRoutes = snap.val() || {};
+  if (tab === 'routes') renderList(); // refresh if on suggestions tab
+});
+
+function saveRouteToDb() {
+  const inner = sel.filter(x => x !== homeId());
+  if (!inner.length) return alert('Erst Spots zusammenstellen!');
+  const who = activePerson ? (TRIP_PEOPLE[activeTrip]?.find(p=>p.id===activePerson)?.name || activePerson) : 'Unbekannt';
+  const name = prompt('Route-Name:', who + 's Route');
+  if (!name) return;
+  const key = Date.now().toString(36);
+  db.ref('routes/' + activeTrip + '/' + key).set({
+    name: name,
+    by: who,
+    ids: inner,
+    ts: Date.now()
+  });
+  alert('Route "' + name + '" gespeichert!');
+}
+
+function loadSavedRoute(tripId, key) {
+  const r = savedRoutes[tripId]?.[key];
+  if (!r) return;
+  sel = [homeId(), ...r.ids, homeId()];
+  localStorage.setItem('vt-sel', JSON.stringify(sel));
+  activeRouteIdx = -1;
+  setTab('sel');
+  render();
+  setTimeout(fitRoute, 500);
+}
+
+function deleteSavedRoute(tripId, key) {
+  if (!confirm('Route wirklich löschen?')) return;
+  db.ref('routes/' + tripId + '/' + key).remove();
+}
 
 // ============================================================
 // ROUTE SHARING via URL hash
