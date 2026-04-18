@@ -1808,7 +1808,7 @@ function renderList() {
     const wcTag = s.wc ? '<span class="tg wc">WC</span>' : '';
     const foodTag = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
     const routeBtn = s.id===homeId() ? '' : `<button class="card-route-btn ${on?'on-route':''}" onclick="event.stopPropagation();toggle('${s.id}')" title="${on?'Von Route entfernen':'Zur Route'}">${on?'\u2713':'+'}</button>`;
-    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')">
+    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="showInfoCard(S.find(x=>x.id==='${s.id}'),event.clientX+20,event.clientY)" onmouseleave="hideInfoCard()">
       ${on?`<div class="rn">${ri+1}</div>`:''}
       <div class="card-body">
         <div class="nm">${CAT[s.cat]?.i||''} ${s.n}${favDotsHtml(s.id)}</div>
