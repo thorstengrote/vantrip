@@ -1651,7 +1651,7 @@ function renderList() {
         const imgCount2 = getImgs(s.id).length;
         const wcTag2 = s.wc ? '<span class="tg wc">WC</span>' : '';
         const foodTag2 = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
-        h += `<div class="card ${on2?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){highlightPill('${s.id}');var sp=S.find(function(x){return x.id==='${s.id}'});if(!sp)return;map.flyTo({center:[sp.lng,sp.lat],zoom:Math.max(map.getZoom(),9),duration:800});setTimeout(function(){var pp=map.project([sp.lng,sp.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(sp,mr.left+pp.x+15,mr.top+pp.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()" style="border-left:3px solid ${p.color}">
+        h += `<div class="card ${on2?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){highlightPill('${s.id}');var sp=S.find(function(x){return x.id==='${s.id}'});if(!sp)return;map.flyTo({center:[sp.lng,sp.lat],zoom:7,duration:800,curve:1.5});setTimeout(function(){var pp=map.project([sp.lng,sp.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(sp,mr.left+pp.x+15,mr.top+pp.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()" style="border-left:3px solid ${p.color}">
           <div class="card-body">
             <div class="nm">${ci} ${s.n} ${allWho ? '<span class="fav-dots">'+allWho+'</span>' : ''}</div>
             <div class="sub">${s.co} \u00b7 ${s.ni} N${imgCount2>1?' \u00b7 '+imgCount2+' Fotos':''}</div>
@@ -1779,7 +1779,7 @@ function renderList() {
       // Tags
       const tagsHtml = s.t.length ? `<div class="gs-tags">${s.t.map(t => `<span class="tg">${t}</span>`).join('')}</div>` : '';
 
-      h += `<div class="gs" onmouseenter="highlightPill('${s.id}');map.flyTo({center:[${s.lng},${s.lat}],zoom:Math.max(map.getZoom(),8),duration:600})" onmouseleave="clearHighlight()">
+      h += `<div class="gs" onmouseenter="highlightPill('${s.id}');map.flyTo({center:[${s.lng},${s.lat}],zoom:7,duration:800,curve:1.5})" onmouseleave="clearHighlight()">
         <div class="gs-head" onclick="flyTo('${s.id}')">
           <div class="gs-num">${i}</div>
           <div class="gs-title">${ci} ${s.n}${favDotsHtml(s.id)}</div>
@@ -1817,7 +1817,7 @@ function renderList() {
     const wcTag = s.wc ? '<span class="tg wc">WC</span>' : '';
     const foodTag = FOOD[s.id] ? '<span class="tg" style="background:rgba(243,156,18,.12);color:#f39c12">\u{1F37D}</span>' : '';
     const routeBtn = s.id===homeId() ? '' : `<button class="card-route-btn ${on?'on-route':''}" onclick="event.stopPropagation();toggle('${s.id}')" title="${on?'Von Route entfernen':'Zur Route'}">${on?'\u2713':'+'}</button>`;
-    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){highlightPill('${s.id}');var s=S.find(function(x){return x.id==='${s.id}'});if(!s)return;map.flyTo({center:[s.lng,s.lat],zoom:Math.max(map.getZoom(),9),duration:800});setTimeout(function(){var p=map.project([s.lng,s.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(s,mr.left+p.x+15,mr.top+p.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()">
+    h += `<div class="card ${on?'sel':''}" onclick="flyTo('${s.id}')" onmouseenter="(function(){highlightPill('${s.id}');var s=S.find(function(x){return x.id==='${s.id}'});if(!s)return;map.flyTo({center:[s.lng,s.lat],zoom:7,duration:800,curve:1.5});setTimeout(function(){var p=map.project([s.lng,s.lat]);var mr=document.getElementById('map').getBoundingClientRect();showInfoCard(s,mr.left+p.x+15,mr.top+p.y-20)},850)})()" onmouseleave="hideInfoCard();clearHighlight()">
       ${on?`<div class="rn">${ri+1}</div>`:''}
       <div class="card-body">
         <div class="nm">${CAT[s.cat]?.i||''} ${s.n}${favDotsHtml(s.id)}</div>
