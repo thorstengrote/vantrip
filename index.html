@@ -1005,6 +1005,84 @@ function roadType(speedMs) {
   return ROAD_TYPES[3];
 }
 
+// ============================================================
+// OSM ROAD DETAILS (Overpass API + Firebase Cache)
+// ============================================================
+const osmLocalCache = {};
+
+async function fetchOsmTags(lat, lng) {
+  const key = Math.round(lat*1000)+','+Math.round(lng*1000); // ~100m grid
+  // 1. Local cache
+  if (osmLocalCache[key]) return osmLocalCache[key];
+  // 2. Firebase cache
+  try {
+    const snap = await db.ref('osm-cache/'+key).once('value');
+    if (snap.val()) { osmLocalCache[key] = snap.val(); return snap.val(); }
+  } catch(e) {}
+  // 3. Overpass API
+  try {
+    const q = `[out:json][timeout:5];way(around:30,${lat},${lng})[highway];out tags 1;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', {method:'POST', body:'data='+encodeURIComponent(q)});
+    const data = await res.json();
+    const way = data.elements?.[0]?.tags || {};
+    const tags = {};
+    for (const k of ['surface','smoothness','width','tracktype','incline','maxweight','highway','lanes','name']) {
+      if (way[k]) tags[k] = way[k];
+    }
+    osmLocalCache[key] = tags;
+    try { db.ref('osm-cache/'+key).set(tags); } catch(e) {}
+    return tags;
+  } catch(e) { return {}; }
+}
+
+function osmTagsHtml(tags) {
+  if (!tags || !Object.keys(tags).length) return '<div style="font-size:10px;color:#9ca3af">Keine OSM-Details verfügbar</div>';
+  const labels = {
+    surface: {l:'Belag', v:{'asphalt':'Asphalt','paved':'Befestigt','gravel':'Schotter','dirt':'Erde','sand':'Sand','cobblestone':'Kopfstein','concrete':'Beton','compacted':'Verdichtet','unpaved':'Unbefestigt','fine_gravel':'Feinkies'}},
+    smoothness: {l:'Zustand', v:{'excellent':'Sehr gut','good':'Gut','intermediate':'Mittel','bad':'Schlecht','very_bad':'Sehr schlecht','horrible':'Furchtbar'}},
+    tracktype: {l:'Wegtyp', v:{'grade1':'Befestigt','grade2':'Meist befestigt','grade3':'Gemischt','grade4':'Meist unbefestigt','grade5':'Unbefestigt'}},
+    highway: {l:'Klasse', v:{'motorway':'Autobahn','trunk':'Schnellstr.','primary':'Hauptstr.','secondary':'Landstr.','tertiary':'Nebenstr.','residential':'Wohngebiet','track':'Feldweg','path':'Pfad','unclassified':'Unklassifiziert'}},
+  };
+  let h = '';
+  if (tags.name) h += `<div style="font-size:11px;font-weight:600;margin-bottom:3px">${tags.name}</div>`;
+  for (const [k,v] of Object.entries(tags)) {
+    if (k === 'name') continue;
+    const info = labels[k];
+    const label = info?.l || k;
+    const value = info?.v?.[v] || v;
+    const icon = k==='surface'?'\u{1F6E4}':k==='smoothness'?'\u2728':k==='width'?'\u2194':k==='incline'?'\u2197':k==='maxweight'?'\u2696':k==='lanes'?'\u{1F6A3}':k==='tracktype'?'\u{1F4CF}':'\u{1F3F7}';
+    h += `<div style="font-size:10px;display:flex;gap:4px;margin:1px 0"><span>${icon}</span><span style="color:#6b7280">${label}:</span><span style="font-weight:600">${value}</span></div>`;
+  }
+  return h;
+}
+
+function showSegmentPopup(e, rt) {
+  const speed = rt.id === 'highway' ? '>90' : rt.id === 'main' ? '60-90' : rt.id === 'mountain' ? '35-60' : '<35';
+  // Find matching leg
+  const leg = rLegs.find(l => {
+    const s1 = S.find(x=>x.id===l.from), s2 = S.find(x=>x.id===l.to);
+    if (!s1||!s2) return false;
+    const lat=e.lngLat.lat, lng=e.lngLat.lng;
+    return lat>=Math.min(s1.lat,s2.lat)-0.5 && lat<=Math.max(s1.lat,s2.lat)+0.5 && lng>=Math.min(s1.lng,s2.lng)-0.5 && lng<=Math.max(s1.lng,s2.lng)+0.5;
+  });
+  const legInfo = leg ? `<div style="font-size:10px;margin-top:4px;padding-top:4px;border-top:1px solid #eee"><b>${leg.km} km</b> \u00b7 ${fmtDur(leg.min)} \u00b7 \u00d8 ${leg.avgSpeed||'?'} km/h</div>` : '';
+
+  const popupId = 'seg-popup-' + Date.now();
+  const popup = new maplibregl.Popup({maxWidth:'260px'})
+    .setLngLat(e.lngLat)
+    .setHTML(`<div style="font-size:12px;font-weight:600;color:${rt.color}">${rt.label}</div>
+      <div style="font-size:11px;color:#6b7280">${speed} km/h</div>
+      ${legInfo}
+      <div id="${popupId}" style="margin-top:6px"><span class="sp"></span> <span style="font-size:10px;color:#9ca3af">Strassendetails laden...</span></div>`)
+    .addTo(map);
+
+  // Fetch OSM tags async
+  fetchOsmTags(e.lngLat.lat, e.lngLat.lng).then(tags => {
+    const el = document.getElementById(popupId);
+    if (el) el.innerHTML = osmTagsHtml(tags);
+  });
+}
+
 let rAbort = null;
 const routeLayerIds = [];
 
@@ -1075,18 +1153,13 @@ async function fetchRoute() {
             type: 'FeatureCollection',
             features: segments[rt.id].map(c => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: c } }))
           }});
-          map.addLayer({ id: glowId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': rt.width + 5, 'line-opacity': 0.12 } });
+          // Glow = wide hit area (clickable) + visual glow
+          map.addLayer({ id: glowId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': 22, 'line-opacity': 0.08 } });
           map.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': rt.color, 'line-width': rt.width, 'line-opacity': 0.85 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
-          // Clickable: show road info popup
-          map.on('click', lineId, (e) => {
-            const speed = rt.id === 'highway' ? '>90' : rt.id === 'main' ? '60-90' : rt.id === 'mountain' ? '35-60' : '<35';
-            new maplibregl.Popup({maxWidth:'220px'})
-              .setLngLat(e.lngLat)
-              .setHTML(`<div style="font-size:12px;font-weight:600;color:${rt.color}">${rt.label}</div><div style="font-size:11px;color:#6b7280;margin-top:2px">${speed} km/h Durchschnitt</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">${rt.id==='mountain'?'Kurvig, langsam, aber oft spektakuläre Aussicht':rt.id==='slow'?'Schotter/eng/kurvig - mehr Zeit einplanen':rt.id==='highway'?'Schnell, entspannt, langweilig':'Gute Strasse, zügig voran'}</div>`)
-              .addTo(map);
-          });
-          map.on('mouseenter', lineId, () => map.getCanvas().style.cursor = 'pointer');
-          map.on('mouseleave', lineId, () => map.getCanvas().style.cursor = '');
+          // Click on glow (wide hit area): show detailed road info
+          map.on('click', glowId, (e) => { showSegmentPopup(e, rt); });
+          map.on('mouseenter', glowId, () => map.getCanvas().style.cursor = 'pointer');
+          map.on('mouseleave', glowId, () => map.getCanvas().style.cursor = '');
           routeLayerIds.push(glowId, lineId, srcId);
         }
       } else {
@@ -1876,9 +1949,12 @@ function renderList() {
       if (i > 0) {
         const leg = rLegs.find(l => l.from === sel[ri-1] && l.to === s.id);
         if (leg) {
-          const bar = leg.pcts ? ROAD_TYPES.filter(rt => leg.pcts[rt.id] > 0).map(rt =>
-            `<div style="width:${Math.max(leg.pcts[rt.id],3)}%;height:6px;background:${rt.color};border-radius:1px" title="${rt.label}: ${leg.pcts[rt.id]}%"></div>`
-          ).join('') : '';
+          const bar = leg.pcts ? ROAD_TYPES.filter(rt => leg.pcts[rt.id] > 0).map(rt => {
+            const pct = leg.pcts[rt.id];
+            const segKm = Math.round(leg.km * pct / 100);
+            const segMin = Math.round(leg.min * pct / 100);
+            return `<div style="width:${Math.max(pct,5)}%;height:10px;background:${rt.color};border-radius:2px;cursor:pointer" title="${rt.label}: ${pct}% \u00b7 ~${segKm}km \u00b7 ~${fmtDur(segMin)}"></div>`;
+          }).join('') : '';
           const spd = leg.avgSpeed ? ` \u00b7 \u00d8 ${leg.avgSpeed} km/h` : '';
           h += `<div class="gs-leg">
             <div class="gs-leg-info">\u{1F699} <b>${leg.km} km</b> \u00b7 ${fmtDur(leg.min)}${spd}</div>
