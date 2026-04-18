@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Van-Trip Planner 2026</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚐</text></svg>">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
@@ -2254,6 +2257,18 @@ if (loadFromHash()) {
 } else {
   render();
 }
+
+// Auto-update: check for new version every 5 minutes
+const APP_VERSION = Date.now();
+setInterval(async () => {
+  try {
+    const res = await fetch(location.href, {method:'HEAD', cache:'no-store'});
+    const mod = res.headers.get('last-modified');
+    if (mod && new Date(mod).getTime() > APP_VERSION) {
+      if (confirm('Neue Version verfügbar! Jetzt aktualisieren?')) location.reload();
+    }
+  } catch(e) {}
+}, 5 * 60 * 1000);
 </script>
 </body>
 </html>
