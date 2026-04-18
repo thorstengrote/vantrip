@@ -190,6 +190,15 @@
   #list::-webkit-scrollbar-track { background: #fafbfc; }
   #list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 
+  /* ===== MAP CONTROL BUTTONS ===== */
+  .map-btn {
+    width: 29px; height: 29px; background: #fff; border: none; border-bottom: 1px solid #ddd;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+    color: #333; transition: background 0.1s;
+  }
+  .map-btn:hover { background: #f0f0f0; }
+  .map-btn.active { background: #e8f4fd; color: #0078d4; }
+
   /* ===== CLUSTER PANELS + LEADER LINES ===== */
   #panels-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
   #panels-overlay svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -829,6 +838,55 @@ const map = new maplibregl.Map({
   antialias: true,
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }));
+
+// Custom controls: 3D toggle + Satellite toggle
+class MapButton {
+  constructor(label, title, onClick) { this._label = label; this._title = title; this._onClick = onClick; }
+  onAdd() {
+    this._el = document.createElement('div');
+    this._el.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+    this._el.innerHTML = `<button class="map-btn" title="${this._title}">${this._label}</button>`;
+    this._el.querySelector('button').addEventListener('click', this._onClick);
+    this._btn = this._el.querySelector('button');
+    return this._el;
+  }
+  onRemove() { this._el.remove(); }
+}
+
+const btn3D = new MapButton('3D', '3D Ein/Aus', () => {
+  const is3D = map.getPitch() > 10;
+  map.easeTo({ pitch: is3D ? 0 : 50, duration: 500 });
+  btn3D._btn.classList.toggle('active', !is3D);
+});
+btn3D._btn = null;
+map.addControl(btn3D, 'top-right');
+// Set initial state
+setTimeout(() => { if (btn3D._btn) btn3D._btn.classList.add('active'); }, 100);
+
+let satVisible = false;
+const btnSat = new MapButton('\u{1F6F0}', 'Satellit Ein/Aus', () => {
+  satVisible = !satVisible;
+  if (satVisible) {
+    if (!map.getSource('satellite')) {
+      map.addSource('satellite', {
+        type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        tileSize: 256, maxzoom: 18,
+        attribution: 'Esri World Imagery'
+      });
+    }
+    // Insert satellite below the first symbol layer (so labels stay on top)
+    const layers = map.getStyle().layers;
+    const firstSymbol = layers.find(l => l.type === 'symbol');
+    map.addLayer({ id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 0.85 } },
+      firstSymbol ? firstSymbol.id : undefined);
+  } else {
+    if (map.getLayer('satellite-layer')) map.removeLayer('satellite-layer');
+  }
+  btnSat._btn.classList.toggle('active', satVisible);
+});
+btnSat._btn = null;
+map.addControl(btnSat, 'top-right');
 
 // Add 3D terrain when map loads
 map.on('load', () => {
