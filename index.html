@@ -346,6 +346,7 @@
   <div id="tabs">
     <div class="tab on" data-t="all" onclick="setTab('all')">Alle <span id="n-all"></span></div>
     <div class="tab" data-t="sel" onclick="setTab('sel')">Route <span id="n-sel"></span></div>
+    <div class="tab" data-t="favs" onclick="setTab('favs')">&hearts; Favs <span id="n-favs"></span></div>
     <div class="tab" data-t="routes" onclick="setTab('routes')">Vorschläge</div>
   </div>
   <div id="list"></div>
@@ -384,6 +385,7 @@
     <button class="mn-tab on" onclick="mobileView('map')"><span class="mn-icon">&#x1F5FA;</span>Karte</button>
     <button class="mn-tab" onclick="mobileView('list')"><span class="mn-icon">&#x1F4CB;</span>Alle</button>
     <button class="mn-tab" onclick="mobileView('route')"><span class="mn-icon">&#x1F697;</span>Route</button>
+    <button class="mn-tab" onclick="mobileView('favs')"><span class="mn-icon">&#x2764;</span>Favs</button>
     <button class="mn-tab" onclick="mobileView('suggest')"><span class="mn-icon">&#x2B50;</span>Tipps</button>
   </div>
 </nav>
@@ -1528,7 +1530,30 @@ function loadRoute(idx) {
   setTimeout(fitRoute, 500);
 }
 
-function updCounts() { document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:''; document.getElementById('n-all').textContent=`(${S.filter(s=>s.cat!=='home').length})`; }
+function updCounts() {
+  document.getElementById('n-sel').textContent=sel.length?`(${sel.length})`:'';
+  document.getElementById('n-all').textContent=`(${S.filter(s=>s.cat!=='home').length})`;
+  // Count unique favorited spots
+  const people = TRIP_PEOPLE[activeTrip] || [];
+  const favSet = new Set();
+  for (const p of people) for (const sid of getFavs(activeTrip, p.id)) favSet.add(sid);
+  document.getElementById('n-favs').textContent = favSet.size ? `(${favSet.size})` : '';
+}
+
+function routeFromFavs() {
+  const people = TRIP_PEOPLE[activeTrip] || [];
+  const favSet = new Set();
+  for (const p of people) for (const sid of getFavs(activeTrip, p.id)) favSet.add(sid);
+  if (!favSet.size) return alert('Noch keine Favoriten gesetzt!');
+  const ids = [...favSet].filter(id => S.find(s=>s.id===id));
+  sel = [homeId(), ...ids, homeId()];
+  localStorage.setItem('vt-sel', JSON.stringify(sel));
+  activeRouteIdx = -1;
+  optimizeRoute();
+  setTab('sel');
+  render();
+  setTimeout(fitRoute, 500);
+}
 
 function renderFilters() {
   document.getElementById('filters').innerHTML = Object.entries(CAT).filter(([k])=>k!=='home').map(([k,c]) =>
@@ -1581,6 +1606,54 @@ function crNav(uid, dir) {
 // ============================================================
 function renderList() {
   const el = document.getElementById('list');
+
+  // Favorites tab
+  if (tab === 'favs') {
+    const people = TRIP_PEOPLE[activeTrip] || [];
+    // Collect all favorited spots with who favorited them
+    const favSpots = new Map(); // spotId -> [person objects]
+    for (const p of people) {
+      for (const sid of getFavs(activeTrip, p.id)) {
+        if (!favSpots.has(sid)) favSpots.set(sid, []);
+        favSpots.get(sid).push(p);
+      }
+    }
+    if (!favSpots.size) {
+      el.innerHTML = '<div style="padding:30px;text-align:center;color:#445;font-size:11px">Noch keine Favoriten. Setzt \u2764\uFE0F bei Spots die euch interessieren.</div>';
+      return;
+    }
+    let h = `<div style="padding:10px 14px;background:#fef2f2;border-bottom:1px solid #e0e3e8">
+      <div style="font-size:12px;font-weight:700;color:#d63050;margin-bottom:4px">\u2764\uFE0F ${favSpots.size} Favoriten von ${people.filter(p=>getFavs(activeTrip,p.id).length>0).map(p=>p.name).join(', ')}</div>
+      <button class="ab ab1" onclick="routeFromFavs()" style="font-size:11px">Route aus allen Favoriten erstellen</button>
+    </div>`;
+    // Group by person
+    for (const p of people) {
+      const pFavs = getFavs(activeTrip, p.id);
+      if (!pFavs.length) continue;
+      h += `<div style="padding:6px 14px;background:#f9fafb;border-bottom:1px solid #f0f1f3;font-size:11px;font-weight:700;color:${p.color}">${p.emoji} ${p.name} (${pFavs.length})</div>`;
+      for (const sid of pFavs) {
+        const s = S.find(x=>x.id===sid);
+        if (!s) continue;
+        const ci = CAT[s.cat]?.i || '';
+        const others = favSpots.get(sid)?.filter(x=>x.id!==p.id).map(x=>`<span class="fav-dot" style="background:${x.color}" title="${x.name}">${x.name[0]}</span>`).join('') || '';
+        const thumb = getThumb(s.id);
+        const imgEl = thumb
+          ? `<img class="card-img" src="${thumb}" alt="" onerror="this.className='card-img-ph';this.innerHTML='${ci}';">`
+          : `<div class="card-img-ph">${ci}</div>`;
+        h += `<div class="card" onclick="flyTo('${s.id}')" style="border-left:3px solid ${p.color}">
+          <div class="card-body">
+            <div class="nm">${ci} ${s.n} ${others ? '<span class="fav-dots">'+others+'</span>' : ''}</div>
+            <div class="sub">${s.co} \u00b7 ${s.ni} N</div>
+            <div class="ds">${s.d}</div>
+          </div>
+          ${imgEl}
+          ${favBtnHtml(s.id)}
+        </div>`;
+      }
+    }
+    el.innerHTML = h;
+    return;
+  }
 
   // Route suggestions tab
   if (tab === 'routes') {
@@ -2015,7 +2088,7 @@ function mobileView(view) {
   const navBtns = document.querySelectorAll('#mobile-nav .mn-tab');
   navBtns.forEach((b, i) => b.classList.toggle('on',
     (view === 'map' && i === 0) || (view === 'list' && i === 1) ||
-    (view === 'route' && i === 2) || (view === 'suggest' && i === 3)
+    (view === 'route' && i === 2) || (view === 'favs' && i === 3) || (view === 'suggest' && i === 4)
   ));
 
   if (view === 'map') {
@@ -2025,6 +2098,7 @@ function mobileView(view) {
     sb.classList.add('mobile-visible');
     if (view === 'list') setTab('all');
     else if (view === 'route') setTab('sel');
+    else if (view === 'favs') setTab('favs');
     else if (view === 'suggest') setTab('routes');
   }
 }
