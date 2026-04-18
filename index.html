@@ -386,10 +386,10 @@
       <div class="st"><span class="v" id="s-ni">-</span><span class="l"> Nächte</span></div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-      <span style="font-size:8px;color:#00ff88">&#9473; Autobahn</span>
-      <span style="font-size:8px;color:#00ccff">&#9473; Schnellstr.</span>
-      <span style="font-size:8px;color:#ff8800">&#9473; Bergstr.</span>
-      <span style="font-size:8px;color:#ff0066">&#9473; Langsam</span>
+      <span style="font-size:8px;color:#0055dd">&#9473; Autobahn</span>
+      <span style="font-size:8px;color:#eec800">&#9473; Schnellstr.</span>
+      <span style="font-size:8px;color:#ff6600">&#9473; Bergstr.</span>
+      <span style="font-size:8px;color:#ee0000">&#9473; Langsam</span>
     </div>
     <div class="btns">
       <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
@@ -994,10 +994,10 @@ map.on('load', () => { addCustomLayers(); });
 // ============================================================
 // Road type colors based on speed (OSRM annotation)
 const ROAD_TYPES = [
-  { id: 'highway',  min: 25, color: '#00ff88', width: 5, label: 'Autobahn' },      // >90 km/h — neon green
-  { id: 'main',     min: 17, color: '#00ccff', width: 4, label: 'Schnellstrasse' },  // 60-90 — neon cyan
-  { id: 'mountain', min: 10, color: '#ff8800', width: 4, label: 'Bergstrasse' },     // 35-60 — neon orange
-  { id: 'slow',     min: 0,  color: '#ff0066', width: 3, label: 'Langsam/Schotter' },// <35 — neon pink
+  { id: 'highway',  min: 25, color: '#0055dd', width: 5, label: 'Autobahn' },      // >90 km/h — DE blau
+  { id: 'main',     min: 17, color: '#eec800', width: 4, label: 'Schnellstrasse' },  // 60-90 — DE gelb
+  { id: 'mountain', min: 10, color: '#ff6600', width: 4, label: 'Bergstrasse' },     // 35-60 — grell orange
+  { id: 'slow',     min: 0,  color: '#ee0000', width: 3, label: 'Langsam/Schotter' },// <35 — grell rot
 ];
 
 function roadType(speedMs) {
