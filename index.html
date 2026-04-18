@@ -364,12 +364,14 @@
       <span style="font-size:8px;color:#e74c3c">&#9473; Langsam</span>
     </div>
     <div class="btns">
-      <button class="ab ab1" onclick="exportRoute()">Google Maps</button>
       <button class="ab ab2" onclick="optimizeRoute()">Optimieren</button>
       <button class="ab ab2" onclick="fitRoute()">Zeig Route</button>
       <button class="ab ab2" onclick="clearRoute()">Leeren</button>
-      <button class="ab ab1" onclick="saveRouteToDb()">&#x1F4BE; Speichern</button>
-      <button class="ab ab1" onclick="shareRoute()" id="share-btn">Link teilen</button>
+      <button class="ab ab1" onclick="exportRoute()">Google Maps</button>
+    </div>
+    <div class="btns" style="margin-top:4px">
+      <button class="ab ab1" onclick="saveRouteToDb()" style="flex:1">&#x1F4BE; Route speichern</button>
+      <button class="ab ab2" onclick="shareRoute()" id="share-btn" style="flex:1">&#x1F517; Link teilen</button>
     </div>
   </div>
 </div>
