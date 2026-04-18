@@ -1063,8 +1063,8 @@ function showInfoCard(s, x, y) {
     <div class="ptitle">${ci} ${s.n}</div>
     <div class="pcat">${s.co} \u00b7 ${CAT[s.cat]?.l}</div>
     ${metricsHtml}
-    <div class="pdesc">${s.d}</div>
-    <div class="pwhy">${s.w}</div>
+    <div class="pdesc">${GUIDE[s.id] || s.d}</div>
+    <div class="pwhy">\u{1F4A1} ${s.w}</div>
     ${wcLine}${foodHtml}${WILDLIFE[s.id] ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:#065f46;margin-bottom:3px">\u{1F33F} Tier- & Pflanzenwelt</div><div style="font-size:11px;color:#064e3b;line-height:1.4">${WILDLIFE[s.id]}</div></div>` : ''}
     <div style="margin:4px 0">${tagsHtml}</div>
     ${navBtn}
