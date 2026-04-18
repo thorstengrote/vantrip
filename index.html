@@ -2083,7 +2083,7 @@ function addSpotsLayers() {
     map.on('click', layer, (e) => {
       const f = e.features[0];
       const s = S.find(x => x.id === f.properties.id);
-      if (s) showInfoCard(s, e.originalEvent.clientX, e.originalEvent.clientY);
+      if (s) showInfoCard(s, e.originalEvent.clientX, e.originalEvent.clientY, true);
     });
   });
 }
@@ -2265,17 +2265,28 @@ function updatePanels() {
     el.addEventListener('mouseleave', () => { if (hoverEnabled) hideInfoCard(); });
     el.addEventListener('click', (e) => {
       const s = S.find(x => x.id === el.dataset.id);
-      if (s) showInfoCard(s, e.clientX, e.clientY);
+      if (s) showInfoCard(s, e.clientX, e.clientY, true);
     });
   });
 }
 
-// Hide panels during map movement (dots stay visible), recalculate on stop
+// Hide panels during map movement, recalculate on stop
 let _highlightId = null;
+let _moveTimer = null;
+map.on('click', (e) => { if (icPinned && !e.defaultPrevented) closeInfoCard(); });
 map.on('movestart', () => {
   panelsEl.style.display = 'none';
+  clearTimeout(_moveTimer);
 });
-map.on('moveend', () => { panelsEl.style.display = ''; updatePanels(); if (_highlightId) highlightPill(_highlightId); });
+map.on('moveend', () => {
+  panelsEl.style.display = '';
+  updatePanels();
+  if (_highlightId) highlightPill(_highlightId);
+});
+// Safety: if moveend never fires (rapid interactions), restore panels after 3s
+map.on('movestart', () => {
+  _moveTimer = setTimeout(() => { panelsEl.style.display = ''; updatePanels(); }, 3000);
+});
 
 // Sidebar toggle for tablet
 function toggleSidebar() {
