@@ -1398,7 +1398,7 @@ function highlightSpotNames(text) {
       const thumb = getThumb(spot.id);
       const ci = CAT[spot.cat]?.i || '';
       const imgHtml = thumb ? `<img src="${thumb}">` : '';
-      const popup = `<span class="spot-hint" onclick="flyTo('${spot.id}')" onmouseenter="(function(e){var p=e.target.querySelector('.spot-hint-popup');if(p){p.style.left=e.clientX+'px';p.style.top=(e.clientY-180)+'px';if(e.clientY<200)p.style.top=(e.clientY+20)+'px'}})(event)"><span class="spot-hint-popup">${imgHtml}<span style="font-size:11px;font-weight:600">${ci} ${spot.n}</span></span>${text.match(re)[0]}</span>`;
+      const popup = `<span class="spot-hint" onclick="event.stopPropagation();icPinned=false;flyTo('${spot.id}')" onmouseenter="(function(e){var p=e.currentTarget.querySelector('.spot-hint-popup');if(p){p.style.left=Math.min(e.clientX,window.innerWidth-250)+'px';p.style.top=(e.clientY-180)+'px';if(e.clientY<200)p.style.top=(e.clientY+20)+'px'}})(event)"><span class="spot-hint-popup">${imgHtml}<span style="font-size:11px;font-weight:600">${ci} ${spot.n}</span></span>${text.match(re)[0]}</span>`;
       text = text.replace(re, popup);
       used.add(spot.id);
     }
@@ -1628,7 +1628,7 @@ infocard.addEventListener('mouseleave', () => { if (!icPinned) hideInfoCard(); }
 function isSel(id) { return sel.includes(id); }
 function toggle(id) {
   if (id === homeId()) return;
-  activeRouteIdx = -1; // custom change, no longer a preset route
+  activeRouteIdx = -1; localStorage.setItem('vt-routeIdx','-1'); // custom change, no longer a preset route
   if (isSel(id)) { sel=sel.filter(x=>x!==id); }
   else { smartInsert(id); }
   // Ensure bonn bookends when route has spots
@@ -2047,7 +2047,7 @@ function switchTrip(tripId) {
   if (!t) return;
   activeTrip = tripId;
   S = t.S; FOOD = t.FOOD; GUIDE = t.GUIDE; WILDLIFE = t.WILDLIFE || {}; ROUTES = t.ROUTES; ROUTE_NARRATIVE = t.ROUTE_NARRATIVE;
-  sel = []; localStorage.setItem('vt-sel','[]'); activeRouteIdx = -1;
+  sel = []; localStorage.setItem('vt-sel','[]'); activeRouteIdx = -1; localStorage.setItem('vt-routeIdx','-1');
   filt = new Set(Object.keys(CAT));
   renderPersonBar();
   document.getElementById('hdr-sub').textContent = t.sub;
@@ -2070,9 +2070,9 @@ function switchTrip(tripId) {
 })();
 
 
-let activeRouteIdx = -1;
+let activeRouteIdx = parseInt(localStorage.getItem('vt-routeIdx') || '-1');
 function loadRoute(idx) {
-  activeRouteIdx = idx;
+  activeRouteIdx = idx; localStorage.setItem('vt-routeIdx', String(idx));
   const ids = ROUTES[idx].ids.filter(x=>x!==homeId());
   sel = [homeId(), ...ids, homeId()];
   localStorage.setItem('vt-sel', JSON.stringify(sel));
@@ -2100,7 +2100,7 @@ function routeFromFavs() {
   const ids = [...favSet].filter(id => S.find(s=>s.id===id));
   sel = [homeId(), ...ids, homeId()];
   localStorage.setItem('vt-sel', JSON.stringify(sel));
-  activeRouteIdx = -1;
+  activeRouteIdx = -1; localStorage.setItem('vt-routeIdx','-1');
   optimizeRoute();
   setTab('sel');
   render();
@@ -2799,7 +2799,7 @@ function loadSavedRoute(tripId, key) {
   if (!r) return;
   sel = [homeId(), ...r.ids, homeId()];
   localStorage.setItem('vt-sel', JSON.stringify(sel));
-  activeRouteIdx = -1;
+  activeRouteIdx = -1; localStorage.setItem('vt-routeIdx','-1');
   setTab('sel');
   render();
   setTimeout(fitRoute, 500);
