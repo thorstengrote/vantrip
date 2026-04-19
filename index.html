@@ -214,6 +214,23 @@
   .lp-opt .lp-icon { font-size: 20px; }
   .lp-opt .lp-label { font-size: 9px; font-weight: 600; color: #374151; margin-top: 2px; }
 
+  /* ===== SPOT NAME HIGHLIGHTS in narrative ===== */
+  .spot-hint {
+    position: relative; color: #d63050; font-weight: 600; cursor: pointer;
+    border-bottom: 1px dashed #d63050;
+  }
+  .spot-hint-popup {
+    display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    border: 1px solid #e0e3e8; padding: 6px; z-index: 100;
+    white-space: nowrap; margin-bottom: 6px;
+  }
+  .spot-hint:hover .spot-hint-popup { display: block; }
+  .spot-hint-popup::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #fff;
+  }
+
   /* ===== CLUSTER PANELS + LEADER LINES ===== */
   #panels-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
   #panels-overlay svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -1357,6 +1374,41 @@ const icCarousel = document.getElementById('ic-carousel');
 const icBody = document.getElementById('ic-body');
 let icSpotId = null, icHideTimer = null, icPinned = false;
 
+// Highlight spot names in narrative text with hoverable thumbnails
+function highlightSpotNames(text) {
+  // Build name→spot lookup, sorted longest first to avoid partial matches
+  const spots = S.filter(s => s.cat !== 'home');
+  const nameMap = [];
+  for (const s of spots) {
+    // Full name
+    nameMap.push({name: s.n, spot: s});
+    // Also match short versions: "Sibiu" from "Sibiu (Hermannstadt)", "Nera-Klamm" from "Cheile Nerei (Nera-Klamm)"
+    const paren = s.n.match(/\(([^)]+)\)/);
+    if (paren) { nameMap.push({name: paren[1], spot: s}); nameMap.push({name: s.n.split('(')[0].trim(), spot: s}); }
+    // Split by / : "Cerna-Tal / Băile Herculane" → both parts
+    if (s.n.includes('/')) s.n.split('/').forEach(p => { if (p.trim().length > 4) nameMap.push({name: p.trim(), spot: s}); });
+  }
+  // Sort longest first
+  nameMap.sort((a,b) => b.name.length - a.name.length);
+  // Replace matches (only first occurrence of each spot)
+  const used = new Set();
+  for (const {name, spot} of nameMap) {
+    if (used.has(spot.id)) continue;
+    if (name.length < 4) continue; // skip very short names
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(?<![\\w-])' + escaped + '(?![\\w-])', 'i');
+    if (re.test(text)) {
+      const thumb = getThumb(spot.id);
+      const ci = CAT[spot.cat]?.i || '';
+      const imgHtml = thumb ? `<img src="${thumb}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;display:block;margin-bottom:4px">` : '';
+      const popup = `<span class="spot-hint"><span class="spot-hint-popup">${imgHtml}<span style="font-size:10px;font-weight:600">${ci} ${spot.n}</span></span>${text.match(re)[0]}</span>`;
+      text = text.replace(re, popup);
+      used.add(spot.id);
+    }
+  }
+  return text;
+}
+
 function spotTips(s) {
   const tips = [];
   const w = WILDLIFE[s.id] || '';
@@ -2210,7 +2262,7 @@ function renderList() {
       if (guideText) {
         h += `<div style="padding:16px;background:linear-gradient(135deg,#fef2f2,#fff);border-bottom:2px solid #d63050">
           <div style="font-size:14px;font-weight:700;color:#d63050;margin-bottom:8px">\u{1F697} ${ROUTES[activeRouteIdx]?.name || 'Eure Route'}</div>
-          <div style="font-size:12px;line-height:1.7;color:#374151">${guideText}</div>
+          <div style="font-size:12px;line-height:1.7;color:#374151">${highlightSpotNames(guideText)}</div>
         </div>`;
       }
     }
