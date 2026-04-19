@@ -1889,11 +1889,34 @@ db.ref('favs').on('value', snap => {
   render(); // re-render when anyone changes favorites
 });
 
-function saveFavs() {
-  db.ref('favs').set(allFavs);
-}
+function saveFavs() { db.ref('favs').set(allFavs); }
 function getFavs(tripId, personId) { return allFavs[tripId]?.[personId] || []; }
 function isFav(spotId) { return activePerson && getFavs(activeTrip, activePerson).includes(spotId); }
+
+// Route favorites (same pattern)
+let routeFavs = {};
+db.ref('route-favs').on('value', snap => { routeFavs = snap.val() || {}; if (tab === 'routes') renderList(); });
+function toggleRouteFav(routeKey) {
+  if (!activePerson) { showPersonPicker(); return; }
+  if (!favConfirmedThisSession) { pendingFavSpot = null; showPersonConfirm(); return; }
+  if (!routeFavs[activeTrip]) routeFavs[activeTrip] = {};
+  if (!routeFavs[activeTrip][activePerson]) routeFavs[activeTrip][activePerson] = [];
+  const arr = routeFavs[activeTrip][activePerson];
+  const idx = arr.indexOf(routeKey);
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(routeKey);
+  db.ref('route-favs').set(routeFavs);
+}
+function isRouteFav(rk) { return activePerson && (routeFavs[activeTrip]?.[activePerson]||[]).includes(rk); }
+function routeFavDotsHtml(rk) {
+  const people = TRIP_PEOPLE[activeTrip] || [];
+  const dots = people.filter(p => (routeFavs[activeTrip]?.[p.id]||[]).includes(rk))
+    .map(p => `<span class="fav-dot" style="background:${p.color}" title="${p.name}">${p.name[0]}</span>`);
+  return dots.length ? `<span class="fav-dots">${dots.join('')}</span>` : '';
+}
+function routeFavBtnHtml(rk) {
+  const pc = TRIP_PEOPLE[activeTrip]?.find(p=>p.id===activePerson)?.color||'#d63050';
+  return `<button class="fav-btn ${isRouteFav(rk)?'faved':''}" onclick="event.stopPropagation();toggleRouteFav('${rk}')" title="Route favorisieren" style="color:${pc};font-size:20px">\u2764\uFE0F</button>`;
+}
 let favConfirmedThisSession = false;
 function toggleFav(spotId) {
   if (!activePerson) { pendingFavSpot = spotId; showPersonPicker(); return; }
@@ -2152,7 +2175,7 @@ function renderList() {
           const r = tripSaved[k];
           const spots = (r.ids||[]).map(id => S.find(s=>s.id===id)?.n || id).join(' \u2192 ');
           return `<div class="rcard" style="border-left:3px solid #d63050">
-            <div class="rtitle">${r.name}</div>
+            <div class="rtitle" style="display:flex;align-items:center;gap:6px"><span style="flex:1">${r.name}</span>${routeFavBtnHtml('s_'+k)}${routeFavDotsHtml('s_'+k)}</div>
             <div class="rsub">von ${r.by} \u00b7 ${(r.ids||[]).length} Stops</div>
             <div class="rdesc" style="font-size:10px;color:#6b7280">${spots}</div>
             <div style="display:flex;gap:4px;margin-top:6px">
@@ -2166,7 +2189,7 @@ function renderList() {
     el.innerHTML = savedHtml +
       '<div style="padding:8px 14px;font-size:11px;font-weight:700;color:#374151;border-bottom:1px solid #e0e3e8">\u{1F4A1} Routen-Vorschl\u00e4ge</div>' +
       ROUTES.map((r,i) => `<div class="rcard">
-        <div class="rtitle">${i+1}. ${r.name}</div>
+        <div class="rtitle" style="display:flex;align-items:center;gap:6px"><span style="flex:1">${i+1}. ${r.name}</span>${routeFavBtnHtml('r'+i)}${routeFavDotsHtml('r'+i)}</div>
         <div class="rsub">${r.sub} \u00b7 ${r.ids.length} Stops</div>
         <div class="rdesc">${r.desc}</div>
         ${ROUTE_NARRATIVE[i] ? `<div style="font-size:11px;line-height:1.6;color:#374151;margin:6px 0;padding:8px 10px;background:#fef9f0;border-radius:6px;border-left:3px solid #d63050">${ROUTE_NARRATIVE[i]}</div>` : ''}
