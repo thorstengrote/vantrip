@@ -1431,11 +1431,11 @@ function showInfoCard(s, x, y, pin) {
     <div class="ptitle" style="display:flex;align-items:center;gap:4px"><span style="flex:1">${ci} ${s.n}</span>${favBtnHtml(s.id)}${favDotsHtml(s.id)}</div>
     <div class="pcat">${s.co} \u00b7 ${CAT[s.cat]?.l}</div>
     ${metricsHtml}
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${s.t.map(t=>`<span style="font-size:10px;background:#f3f4f6;padding:2px 7px;border-radius:6px;color:#374151">${t}</span>`).join('')}</div>
     <div class="pdesc">${GUIDE[s.id] || s.d}</div>
     <div class="pwhy">\u{1F4A1} ${s.w}</div>
     ${wcLine}${foodHtml}${WILDLIFE[s.id] ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:#065f46;margin-bottom:3px">\u{1F33F} Tier- & Pflanzenwelt</div><div style="font-size:11px;color:#064e3b;line-height:1.4">${WILDLIFE[s.id]}</div></div>` : ''}
     ${spotTipsHtml(s)}
-    <div style="margin:4px 0">${tagsHtml}</div>
     ${navBtn}
     <button class="${btnCls}" onclick="toggle('${s.id}')" style="width:100%;margin-top:4px">${btnTxt}</button>
   `;
