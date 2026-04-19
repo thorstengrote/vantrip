@@ -2072,25 +2072,14 @@ function switchTrip(tripId) {
 
 let activeRouteIdx = parseInt(localStorage.getItem('vt-routeIdx') || '-1');
 function previewRoute(idx) {
-  const ids = ROUTES[idx].ids;
-  const pts = ids.map(id => S.find(s=>s.id===id)).filter(Boolean);
-  if (!pts.length) return;
-  // Fit map to route spots
-  const lngs = pts.map(s=>s.lng), lats = pts.map(s=>s.lat);
-  map.fitBounds([[Math.min(...lngs)-0.5, Math.min(...lats)-0.5],[Math.max(...lngs)+0.5, Math.max(...lats)+0.5]], {padding:40, duration:1000});
-  // Draw preview line (straight connections)
-  if (map.getLayer('preview-line')) map.removeLayer('preview-line');
-  if (map.getSource('preview-src')) map.removeSource('preview-src');
-  map.addSource('preview-src', {type:'geojson', data:{type:'Feature', geometry:{type:'LineString', coordinates:pts.map(s=>[s.lng,s.lat])}}});
-  map.addLayer({id:'preview-line', type:'line', source:'preview-src', paint:{'line-color':'#d63050','line-width':3,'line-dasharray':[4,3],'line-opacity':0.7}});
-  // Highlight the spots
-  pts.forEach(s => highlightPill(s.id));
-  // Auto-remove preview after 10s or on next interaction
-  setTimeout(() => {
-    if (map.getLayer('preview-line')) map.removeLayer('preview-line');
-    if (map.getSource('preview-src')) map.removeSource('preview-src');
-    clearHighlight();
-  }, 15000);
+  activeRouteIdx = idx; localStorage.setItem('vt-routeIdx', String(idx));
+  const ids = ROUTES[idx].ids.filter(x=>x!==homeId());
+  sel = [homeId(), ...ids, homeId()];
+  localStorage.setItem('vt-sel', JSON.stringify(sel));
+  optimizeRoute();
+  // Render route on map (fetch OSRM etc.) but stay on current tab
+  renderMarkers(); reqRoute(); updCounts(); renderSummary();
+  setTimeout(fitRoute, 500);
 }
 
 function loadRoute(idx) {
