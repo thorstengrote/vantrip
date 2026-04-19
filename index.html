@@ -2071,6 +2071,28 @@ function switchTrip(tripId) {
 
 
 let activeRouteIdx = parseInt(localStorage.getItem('vt-routeIdx') || '-1');
+function previewRoute(idx) {
+  const ids = ROUTES[idx].ids;
+  const pts = ids.map(id => S.find(s=>s.id===id)).filter(Boolean);
+  if (!pts.length) return;
+  // Fit map to route spots
+  const lngs = pts.map(s=>s.lng), lats = pts.map(s=>s.lat);
+  map.fitBounds([[Math.min(...lngs)-0.5, Math.min(...lats)-0.5],[Math.max(...lngs)+0.5, Math.max(...lats)+0.5]], {padding:40, duration:1000});
+  // Draw preview line (straight connections)
+  if (map.getLayer('preview-line')) map.removeLayer('preview-line');
+  if (map.getSource('preview-src')) map.removeSource('preview-src');
+  map.addSource('preview-src', {type:'geojson', data:{type:'Feature', geometry:{type:'LineString', coordinates:pts.map(s=>[s.lng,s.lat])}}});
+  map.addLayer({id:'preview-line', type:'line', source:'preview-src', paint:{'line-color':'#d63050','line-width':3,'line-dasharray':[4,3],'line-opacity':0.7}});
+  // Highlight the spots
+  pts.forEach(s => highlightPill(s.id));
+  // Auto-remove preview after 10s or on next interaction
+  setTimeout(() => {
+    if (map.getLayer('preview-line')) map.removeLayer('preview-line');
+    if (map.getSource('preview-src')) map.removeSource('preview-src');
+    clearHighlight();
+  }, 15000);
+}
+
 function loadRoute(idx) {
   activeRouteIdx = idx; localStorage.setItem('vt-routeIdx', String(idx));
   const ids = ROUTES[idx].ids.filter(x=>x!==homeId());
@@ -2267,6 +2289,7 @@ function renderList() {
         <div class="rdesc">${r.desc}</div>
         <div style="font-size:11px;line-height:1.5;color:#374151;margin:6px 0">${highlightSpotNames(r.desc)}</div>
         <ul class="rpros">${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul>
+        <button class="rbtn" onclick="previewRoute(${i})">Vorschau</button>
         <button class="rbtn" onclick="loadRoute(${i})">Route laden</button>
       </div>`).join('');
     return;
