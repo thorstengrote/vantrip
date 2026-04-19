@@ -220,16 +220,13 @@
     border-bottom: 1px dashed #d63050;
   }
   .spot-hint-popup {
-    display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-    background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
-    border: 1px solid #e0e3e8; padding: 6px; z-index: 100;
-    white-space: nowrap; margin-bottom: 6px;
+    display: none; position: fixed;
+    background: #fff; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.3);
+    border: 1px solid #e0e3e8; padding: 8px; z-index: 200;
+    white-space: nowrap;
   }
+  .spot-hint-popup img { width: 220px; height: 140px; object-fit: cover; border-radius: 6px; display: block; margin-bottom: 4px; }
   .spot-hint:hover .spot-hint-popup { display: block; }
-  .spot-hint-popup::after {
-    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    border: 6px solid transparent; border-top-color: #fff;
-  }
 
   /* ===== CLUSTER PANELS + LEADER LINES ===== */
   #panels-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
@@ -1400,8 +1397,8 @@ function highlightSpotNames(text) {
     if (re.test(text)) {
       const thumb = getThumb(spot.id);
       const ci = CAT[spot.cat]?.i || '';
-      const imgHtml = thumb ? `<img src="${thumb}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;display:block;margin-bottom:4px">` : '';
-      const popup = `<span class="spot-hint"><span class="spot-hint-popup">${imgHtml}<span style="font-size:10px;font-weight:600">${ci} ${spot.n}</span></span>${text.match(re)[0]}</span>`;
+      const imgHtml = thumb ? `<img src="${thumb}">` : '';
+      const popup = `<span class="spot-hint" onclick="flyTo('${spot.id}')" onmouseenter="(function(e){var p=e.target.querySelector('.spot-hint-popup');if(p){p.style.left=e.clientX+'px';p.style.top=(e.clientY-180)+'px';if(e.clientY<200)p.style.top=(e.clientY+20)+'px'}})(event)"><span class="spot-hint-popup">${imgHtml}<span style="font-size:11px;font-weight:600">${ci} ${spot.n}</span></span>${text.match(re)[0]}</span>`;
       text = text.replace(re, popup);
       used.add(spot.id);
     }
@@ -2173,13 +2170,37 @@ function renderList() {
         favSpots.get(sid).push(p);
       }
     }
-    if (!favSpots.size) {
-      el.innerHTML = '<div style="padding:30px;text-align:center;color:#445;font-size:11px">Noch keine Favoriten. Setzt \u2764\uFE0F bei Spots die euch interessieren.</div>';
+    // Route favorites section
+    let h = '';
+    const rFavRoutes = new Map(); // routeKey -> [person objects]
+    for (const p of people) {
+      for (const rk of (routeFavs[activeTrip]?.[p.id] || [])) {
+        if (!rFavRoutes.has(rk)) rFavRoutes.set(rk, []);
+        rFavRoutes.get(rk).push(p);
+      }
+    }
+    if (rFavRoutes.size) {
+      h += '<div style="padding:8px 14px;font-size:11px;font-weight:700;color:#d63050;border-bottom:1px solid #e0e3e8">\u{1F697} Favorisierte Routen</div>';
+      for (const [rk, who] of rFavRoutes) {
+        let rName = '', rSub = '';
+        if (rk.startsWith('r')) { const i = parseInt(rk.slice(1)); rName = ROUTES[i]?.name||rk; rSub = ROUTES[i]?.sub||''; }
+        else if (rk.startsWith('s_')) { const sr = savedRoutes[activeTrip]?.[rk.slice(2)]; rName = sr?.name||rk; rSub = 'von '+(sr?.by||'?'); }
+        const dots = who.map(p => `<span class="fav-dot" style="background:${p.color}" title="${p.name}">${p.name[0]}</span>`).join('');
+        const loadFn = rk.startsWith('r') ? `loadRoute(${rk.slice(1)})` : `loadSavedRoute('${activeTrip}','${rk.slice(2)}')`;
+        h += `<div style="padding:8px 14px;border-bottom:1px solid #f0f1f3;display:flex;align-items:center;gap:8px">
+          <div style="flex:1"><div style="font-size:12px;font-weight:600">${rName} <span class="fav-dots">${dots}</span></div><div style="font-size:10px;color:#6b7280">${rSub}</div></div>
+          <button class="ab ab1" onclick="${loadFn}" style="font-size:10px;padding:4px 10px">Laden</button>
+        </div>`;
+      }
+    }
+
+    if (!favSpots.size && !rFavRoutes.size) {
+      el.innerHTML = '<div style="padding:30px;text-align:center;color:#445;font-size:11px">Noch keine Favoriten. Setzt \u2764\uFE0F bei Spots und Routen die euch interessieren.</div>';
       return;
     }
-    let h = `<div style="padding:10px 14px;background:#fef2f2;border-bottom:1px solid #e0e3e8">
-      <div style="font-size:12px;font-weight:700;color:#d63050;margin-bottom:4px">\u2764\uFE0F ${favSpots.size} Favoriten von ${people.filter(p=>getFavs(activeTrip,p.id).length>0).map(p=>p.name).join(', ')}</div>
-      <button class="ab ab1" onclick="routeFromFavs()" style="font-size:11px">Route aus allen Favoriten erstellen</button>
+    h += `<div style="padding:10px 14px;background:#fef2f2;border-bottom:1px solid #e0e3e8">
+      <div style="font-size:12px;font-weight:700;color:#d63050;margin-bottom:4px">\u2764\uFE0F ${favSpots.size} POI-Favoriten von ${people.filter(p=>getFavs(activeTrip,p.id).length>0).map(p=>p.name).join(', ') || 'niemandem'}</div>
+      ${favSpots.size ? '<button class="ab ab1" onclick="routeFromFavs()" style="font-size:11px">Route aus POI-Favoriten erstellen</button>' : ''}
     </div>`;
     // Group by person
     for (const p of people) {
@@ -2244,7 +2265,7 @@ function renderList() {
         <div class="rtitle" style="display:flex;align-items:center;gap:6px"><span style="flex:1">${i+1}. ${r.name}</span>${routeFavBtnHtml('r'+i)}${routeFavDotsHtml('r'+i)}</div>
         <div class="rsub">${r.sub} \u00b7 ${r.ids.length} Stops</div>
         <div class="rdesc">${r.desc}</div>
-        ${ROUTE_NARRATIVE[i] ? `<div style="font-size:11px;line-height:1.6;color:#374151;margin:6px 0;padding:8px 10px;background:#fef9f0;border-radius:6px;border-left:3px solid #d63050">${ROUTE_NARRATIVE[i]}</div>` : ''}
+        <div style="font-size:11px;line-height:1.5;color:#374151;margin:6px 0">${highlightSpotNames(r.desc)}</div>
         <ul class="rpros">${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul>
         <button class="rbtn" onclick="loadRoute(${i})">Route laden</button>
       </div>`).join('');
