@@ -1414,9 +1414,7 @@ function showInfoCard(s, x, y, pin) {
   if (s.wt) mParts.push(`\u{1F4A7} Wasser ${s.wt}\u00b0C`);
   if (s.el) mParts.push(`\u2191 ${s.el}m`);
   if (s.ni) mParts.push(`\u{1F319} ${s.ni} N\u00e4chte`);
-  if (s.net === 0) mParts.push('\u{1F4F5} Offline \u2013 Karten vorher laden');
-  else if (s.net === 1) mParts.push('\u{1F4F6} Netz l\u00fcckenhaft');
-  const metricsHtml = mParts.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:11px">${mParts.map(m=>`<span style="background:#f3f4f6;padding:2px 7px;border-radius:6px;color:#374151">${m}</span>`).join('')}</div>` : '';
+  const metricsHtml = mParts.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;font-size:10px">${mParts.map(m=>`<span style="background:#f3f4f6;padding:2px 7px;border-radius:6px;color:#374151">${m}</span>`).join('')}</div>` : '';
 
   // X button on top of entire card (over carousel)
   infocard.querySelector('.ic-close')?.remove();
@@ -2326,7 +2324,7 @@ function panelContent(s, zoom) {
   const at = midTemp(s.at);
   const wt = s.wt ? `<span class="cp-info" style="color:#2980b9">\u{1F4A7}${midTemp(s.wt)}\u00b0</span>` : '';
   const wc = s.wc ? `<span class="cp-info">\u26FA</span>` : '';
-  const net = s.net === 0 ? `<span class="cp-info" style="color:#999" title="Offline-Karten laden">&#x1F4F5;</span>` : s.net === 1 ? `<span class="cp-info" style="color:#bbb" title="Netz l\u00fcckenhaft">&#x1F4F6;</span>` : '';
+  const net = ''; // network status only in spotTips, not in pills
   // Skip category icon if it's 💧 and we already show 💧 with water temp
   const showIcon = !(s.wt && ci === '\u{1F4A7}');
 
