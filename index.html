@@ -1418,7 +1418,10 @@ function spotTips(s) {
   else if (s.net === 1) tips.push({icon:'\u{1F4F6}',text:'Netz l\u00fcckenhaft \u2013 Offline-Karten empfohlen',pri:2});
 
   // Bears
-  if (w.match(/[Bb]\u00e4r|[Bb]ear|[Bb]raunb/)) tips.push({icon:'\u{1F43B}',text:'B\u00e4rengebiet: Essen nachts im Van verschlie\u00dfen (nicht im Vorzelt!). B\u00e4renspray in Outdoor-L\u00e4den in Bra\u0219ov/Sibiu kaufbar (~20\u20ac)',pri:1});
+  if (w.match(/[Bb]\u00e4r|[Bb]ear|[Bb]raunb/)) {
+    const bearShop = (s.co||'').match(/RO|RS|AL|ME|XK|BG/) ? 'in Outdoor-L\u00e4den in Bra\u0219ov/Sibiu kaufbar (~20\u20ac)' : (s.co||'').match(/ES/) ? 'im Outdoor-Laden in Oviedo/Le\u00f3n kaufbar' : 'vor Ort im Outdoor-Laden kaufbar';
+    tips.push({icon:'\u{1F43B}',text:'B\u00e4rengebiet: Essen nachts im Van verschlie\u00dfen (nicht im Vorzelt!). B\u00e4renspray '+bearShop,pri:1});
+  }
 
   // Wolves (less actionable but good to know)
   if (w.match(/[Ww]\u00f6lf|[Ww]olf/)) tips.push({icon:'\u{1F43A}',text:'Wolfsgebiet: Nachts Licht/L\u00e4rm h\u00e4lt sie fern. Sehr scheu, Begegnungen extrem selten',pri:3});
