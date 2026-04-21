@@ -858,6 +858,80 @@ const WILDLIFE_IBERIA = {
 'nazare': 'Die steilen Klippen am Fort\u00edn sind Brutplatz f\u00fcr Wanderfalken, Kormorane und Silberm\u00f6wen. Im Atlantik tummeln sich Delfine und saisonal Mondfische (Mola Mola). An den Felspools bei Ebbe findet man Seesterne, Krabben und Anemonen.',
 };
 
+// ============================================================
+// PARKING / OVERNIGHT SPOT INFO per spot
+// ============================================================
+let PARK = {
+  'bonn': 'Zuhause — eigene Einfahrt, nix zu planen.',
+  'budapest': 'P+R Parkplatz am Stadtrand (z.B. Kelenföld, ~5€/Tag), Metro ins Zentrum. Innenstadt-Parken mit Van unmöglich. (Aus Guide)',
+  'sibiu': 'Grosser Parkplatz am Stadion oder Richtung Sub Arini Park — nachts ruhig genug zum Schlafen, Schilder vorher checken. Kostenlos oder wenige Lei. (Aus Guide)',
+  'brasov': 'Parkplatz am Lago di Noua südlich der Stadt, direkt am See — morgens Schwimmen möglich. Freistehen dort üblich unter Vanlifern. (Aus Guide)',
+  'sighisoara': 'Grosser öffentlicher Parkplatz am Fuss der Zitadelle — zu Fuss hochgehen, Gassen zu eng für den Van. Wenige Lei Parkgebühr. (Aus Guide)',
+  'alba-iulia': 'Grosser Parkplatz direkt vor der Festung — für eine Nacht freistehen kein Problem. Gratis oder sehr günstig. (Aus Guide)',
+  'transfagarasan': 'Bâlea Cascadă Parkplatz: kostenlos übernachten, Toilette vorhanden, Wasserfall nebenan. Passstrasse nur Juni–Oktober offen — vorher online checken. (Aus Guide)',
+  'piatra-craiului': 'Wiesen am Dorfrand von Peștera — frei, ruhig, Kuhglocken als Wecker. Direkter Zugang zum Nationalpark. (Aus Guide)',
+  'retezat': 'Parkplatz Gura Zlata am Ende der Schotterstrasse — Freistehen üblich, andere Camper vor Ort, Ranger-Station. Schotterstrasse machbar aber langsam. (Aus Guide)',
+  'padis': 'Hochplateau: frei stehen auf Wiesen, verstreute Hütten für Essen. Zufahrt Schotterpiste (teils ruppig, Bodenfreiheit hilft). Off-grid: kein Netz, kein Strom. (Aus Guide)',
+  'scarisoara': 'Parkplatz direkt oben am Höhleneingang, Van steht problemlos. Gut mit Pădis kombinierbar. (Aus Guide)',
+  'cheile-nerei': 'Parkplatz bei Sasca Română oder Wiesen vor der Klamm — Freistehen möglich. Rustikale Toiletten. (Aus Guide + Spot-Beschreibung)',
+  'olt-valley': 'Mehrere Zufahrten von der Strasse zu Kiesbänken direkt am Wasser — Van bis ans Ufer, freistehen unkompliziert. Schotter/Kies. (Aus Guide)',
+  'cerna-valley': 'Parkplatz beim verlassenen Casino von Băile Herculane — fotogener Verfall, guter Ausgangspunkt für Thermalquellen-Wanderung (20–30 Min flussaufwärts). (Aus Guide)',
+  'valea-stan': 'Schmale, kurvige Strasse ab Arefu — Van passt, aber eng. Wenige Parkmöglichkeiten im Tal. Vor Ort erkunden — Park4Night checken.',
+  'veliko-tarnovo': 'In Arbanasi (3km oberhalb) parken — ruhiger, Stellplätze mit Blick übers Tal. Altstadt-Parken schwierig wegen steiler Gassen. (Aus Guide)',
+  'plovdiv': 'Ausserhalb der Altstadt parken und zu Fuss erkunden. Strassenparkplätze günstig (wenige Leva/Tag). Nebet Tepe als Orientierung. (Aus Guide)',
+  'melnik': 'Stellmöglichkeiten am Ortsrand mit Blick auf die Sandstein-Pyramiden. Kleinstes Städtchen — alles zu Fuss erreichbar. (Aus Guide)',
+  'rila-monastery': 'Van am Rilska-Fluss flussabwärts vom Kloster abstellen — schattige Plätze zwischen Kiefern, Freistehen besser als Kloster-Parkplatz (voller). (Aus Guide)',
+  'rhodope': 'Wildcamp-Paradies: weiche Wiesen, Quellwasser, kühle Nächte auch im August. Strassen teilweise eng und kurvig. Supermärkte Mangelware — Vorräte mitnehmen. (Aus Guide)',
+  'trigrad-gorge': 'Freistehen auf Wiesen oberhalb der Schlucht — dort stehen oft andere Vans. Schotter-Parkplatz dokumentiert. (Aus Guide + Spot-Beschreibung)',
+  'buinovsko': 'Van an Wiesen am Talrand abstellen — Freistehen unkompliziert, kaum andere Besucher. Ruhiger als Trigrad nebenan. (Aus Guide)',
+  'shiroka-laka': 'Etwas ausserhalb am Fluss entlang parken — Freistehen möglich. Dorf zu Fuss erreichbar. (Aus Guide)',
+  'belogradchik': 'Ruhige Feldwege in der Umgebung zum Freistehen. Festungs-Parkplatz für Tagesbesuch. Richtung Venetsa-Höhle: ruhige Forstwege. (Aus Guide + Spot-Beschreibung)',
+  'devetashka': 'Parkplatz direkt vor der Höhle — wenige Minuten zu Fuss zum Eingang. Am Osam-Fluss in der Nähe freistehen und abkühlen. Gratis. (Aus Guide)',
+  'pirin': 'Van bleibt in Bansko — Stellplätze vorhanden, Gondel fährt hoch in den NP. Abends Mehana-Küche für kleines Geld. (Aus Guide)',
+  'mogilitsa-arda': 'Freistehen direkt am Fluss möglich — morgens Wasserrauschen als Wecker. Kein Laden in der Nähe, Proviant mitnehmen! (Aus Guide)',
+  'devils-bridge': 'Parkplatz oberhalb der Brücke — Freistehen dort dokumentiert. Tagesbesuch oder Übernachtung. (Aus Guide)',
+  'madzharovo-arda': 'Mehrere Stellen mit direktem Flusszugang zum Freistehen — einfach am Ufer entlang fahren. Abends Lagerfeuer am Flussufer. (Aus Guide)',
+  'krushuna': 'Parkplatz-Übernachtung am Wasserfall OK. Gut mit Devetashka kombinieren (20 Min entfernt). (Aus Guide + Spot-Beschreibung)',
+  'sithonia': 'Freistehen offiziell schwierig geworden, aber entlang der Küstenstrasse noch Spots unter Olivenbäumen. Im Hochsommer früh morgens anrollen. (Aus Guide)',
+  'olympus-coast': 'Freistehen in den Olivenhainen etwas zurück vom Strand möglich. Platamonas/Nei Pori ruhiger als Paralia. Litochoro hat Van-Parkplätze. (Aus Guide)',
+  'ulcinj': 'Freistehen am langen Velika Plaža Strand — in die Dünen fahren, Meerblick beim Aufwachen. Unkompliziert. (Aus Guide)',
+  'porto-palermo': 'Albanische Riviera: Freistehen an Buchten üblich. Gjipe Beach nur zu Fuss erreichbar. Vor Ort Park4Night checken für beste Stellplätze.',
+  'ohrid': 'Freistehen ausserhalb der Stadt am See — Westufer Richtung Albanien ruhiger. In der Stadt Parken schwierig. (Aus Spot-Beschreibung + Guide)',
+  'mavrovo': 'Nationalpark hat offizielle Stellplätze, alternativ wild auf Almwiesen stehen — nachts absolute Stille, Milchstrasse über dem See. (Aus Guide)',
+  'nis': 'Parkplatz an der Festung — gratis und zentral. Abends wird dort gegrillt. Niška Banja (10km): warme Therme gratis. (Aus Guide)',
+  'golubac': 'Kiesstrände bei Donji Milanovac direkt am Wasser — Van freistehen. Abends Fischsuppe von der Donau-Fischbude. (Aus Guide)',
+  'belgrade': 'Bewachter Parkplatz Ada Ciganlija See empfohlen, Bus in die City. Zentrum = Parken ist Krieg. (Aus Guide)',
+  'tara-serbia': 'Freistehen bei Mitrovac auf den Waldwiesen — flach, ruhig, nachts Sterne wie im Planetarium. Banjska Stena Viewpoint fussläufig. (Aus Guide)',
+  'uvac-canyon': 'Freistehen am Parkplatz beim Viewpoint Molitva. In Sjenica Sjenički Kajmak kaufen. Wanderung zum Aussichtspunkt ca. 1h. (Aus Guide)',
+  'sicevac': 'Nur 20 Min östlich von Niš — Parken entlang der Strasse am Schluchteingang. Tagesausflug, keine Übernachtung nötig. Vor Ort erkunden — Park4Night checken.',
+  'drina-bajina': 'Kiesbuchten am Ufer zum Freistehen, besonders flussaufwärts Richtung Perućac-Stausee. Lagerfeuer + Grillen möglich. (Aus Guide)',
+  'vrelo-river': 'Mündet in die Drina bei Perućac — Parkplatz am Quellpool, kurzer Stopp. Mit Drina-Bajina kombinieren, dort übernachten. (Aus Guide)',
+  'gostilje': 'Im Zlatibor-Gebiet überall Wiesen zum Freistehen — Bauern am Strassenrand verkaufen Pršut, Kajmak, Waldhonig. (Aus Guide)',
+  'erma-gorge': 'Freistehen auf serbischer Seite unkompliziert — Zufahrt Schotterpiste, aber machbar mit Van. (Aus Guide)',
+  '7-scari': 'Wanderparkplatz bei Timișul de Jos — Tagesausflug von Brașov, Übernachtung besser am Lago di Noua (Brașov). (Aus Guide)',
+  'corvin-castle': 'Burgparkplatz in Hunedoara für Tagesbesuch. Übernachtung am Cinciș-See (15 Min) — ruhiger Stausee, Van abstellen. (Aus Guide)',
+  'salina-turda': 'Grosser Besucherparkplatz am Eingang. Früh morgens oder spät nachmittags kommen — mittags Reisebusse. Turda-Klamm direkt nebenan wanderbar. (Aus Guide)',
+  'viscri': 'Wiese am Dorfrand — Freistehen möglich. Ungeteerte Strassen, Van passt. Büffelkäse an den Zäunen kaufen. (Aus Guide)',
+  'cheile-rametului': 'Parkplatz bei Râmeț — ca. 30–40 Min zu Fuss zu den Pools. Halbtagstrip von Alba Iulia. Übernachtung besser an der Festung Alba Iulia. (Aus Guide)',
+  'wonderful-bridges': 'Forststrasse mit Van machbar, aber Bodenfreiheit hilft. Tages-Stopp, mit Trigrad und Yagodina kombinieren. Vor Ort erkunden — Park4Night checken.',
+  'yagodina-cave': 'Parkplatz an der Höhle vorhanden. Zwischenstopp zwischen Trigrad und Shiroka Laka — Übernachtung eher bei Trigrad-Schlucht. (Aus Guide)',
+  'matka-canyon': 'Parkplatz am Canyon-Eingang, 30 Min von Skopje. Vor 9 Uhr kommen für Ruhe. Tagesausflug, Übernachtung besser ausserhalb Skopje. (Aus Guide)',
+  'prespa-lake': 'In Stenje freistehen direkt am Ufer — einer der magischsten Stellplätze der ganzen Reise. Galicica-Pass Zufahrt spektakulär. (Aus Guide)',
+  'prizren': 'Van unten am Strassenrand parken, zu Fuss in die Altstadt — Gassen zu eng. Genauen Stellplatz vor Ort erkunden — Park4Night checken.',
+  'rugova-gorge': 'Im Tal vor der Schlucht Wiesen zum Freistehen. In Peja selbst guter Markt. (Aus Guide)',
+  'meteora': 'Freistehen auf Parkplätzen ausserhalb Kalambaka möglich. Panoramastrasse zu allen Klöstern mit Van befahrbar. Morgens früh hoch, vor den Reisebussen. (Aus Guide + Spot-Beschreibung)',
+  'valbona': 'Van bleibt in Valbona-Dorf auf dem Parkplatz — Gästehäuser zu Fuss erreichbar (15–25€/Pers mit Halbpension). Gästehäuser oft besser als Van-Schlafen hier. (Aus Guide)',
+  'koman-ferry': 'WICHTIG: Berisha Komani Ferry VORHER online buchen — Van fährt mit, Platz begrenzt. Abfahrt ~9 Uhr, früh da sein. Keine zweite Fahrt. (Aus Guide)',
+  'blue-eye-al': 'Parkplatz direkt am Eingang — 10 Min zu Fuss zur Quelle. Schneller Fotostopp (30–45 Min), keine Übernachtung nötig. (Aus Guide)',
+  'gjirokaster': 'Van unten am Strassenrand parken, zu Fuss in die Altstadt hoch — Gassen viel zu eng zum Fahren. Eine Nacht reicht. (Aus Guide)',
+  'berat': 'Van am Flussufer parken, über die alte Brücke zu Fuss in die Altstadt. Osum Canyon 30 Min südlich für Canyoning. (Aus Guide)',
+  'tara-canyon': 'Van in Žabljak abstellen — kleines Bergstädtchen mit günstiger Küche und Stellplätzen. Rafting + Crno Jezero (Schwarzer See) von dort erreichbar. (Aus Guide)',
+  'vikos-zagori': 'Freistehen in Papingo oder Monodendri auf den Dorfparkplätzen — abends Dorf-Taverna. Steinstrassen zum Dorf eng aber machbar. (Aus Guide)',
+  'olympus-gorge': 'In Litochoro parkt der Van problemlos — Wanderweg startet dort. Tavernas im Dorf für Souvlaki nach der Wanderung. (Aus Guide)',
+  'danube-delta': 'Van bleibt in Tulcea oder Murighiol auf dem Parkplatz — Delta nur per Boot erreichbar. Bootstour ab ~30€ für die ganze Familie. (Aus Guide)',
+  'vama-veche': 'Freistehen am Ortsrand oder günstiger Campingplatz für wenige Euro. Hippie-Strand-Vibes, alles ultra-billig. (Aus Guide)',
+  'sinemorets': 'Am Dorfrand parken, zum Strand 5 Min zu Fuss. Wilder Butamyata-Strand über Waldpfad erreichbar. Ruhiges Stranddorf. (Aus Guide)',
+};
 
 // ============================================================
 // PRE-FETCHED IMAGES (540 photos, no API calls needed)
@@ -1679,6 +1753,7 @@ function showInfoCard(s, x, y, pin) {
     <div class="pwhy">\u{1F4A1} ${s.w}</div>
     ${wcLine}${foodHtml}${WILDLIFE[s.id] ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:#065f46;margin-bottom:3px">\u{1F33F} Tier- & Pflanzenwelt</div><div style="font-size:11px;color:#064e3b;line-height:1.4">${WILDLIFE[s.id]}</div></div>` : ''}
     ${spotTipsHtml(s)}
+    ${PARK[s.id] ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:#1e40af;margin-bottom:3px">\u{1F17F}\uFE0F \u00dcbernachtung / Stellplatz</div><div style="font-size:11px;color:#1e3a5f;line-height:1.4">${PARK[s.id]}</div></div>` : ''}
     ${navBtn}
     <button class="${btnCls}" onclick="toggle('${s.id}')" style="width:100%;margin-top:4px">${btnTxt}</button>
   `;
@@ -1802,7 +1877,7 @@ let ROUTES = [
 // ============================================================
 // TRIP DATA STORAGE (Balkan = default, Iberia = Spain/Portugal)
 // ============================================================
-const TRIP_BALKAN = { S, FOOD, GUIDE, WILDLIFE, ROUTES, ROUTE_NARRATIVE,
+const TRIP_BALKAN = { S, FOOD, GUIDE, WILDLIFE, PARK, ROUTES, ROUTE_NARRATIVE,
   name:'Balkan 2026 · Familie', sub:'HU + RO + BG + RS + MK | 3 Wochen',
   center:[23.5,44], zoom:5.5, homeId:'bonn' };
 
@@ -1951,6 +2026,60 @@ const GUIDE_IBERIA = {
 'nazare': 'Nazar\u00e9 ist die Big-Wave-Hauptstadt der Welt \u2013 hier brechen im Winter Wellen von \u00fcber 20 Metern H\u00f6he, die ihr vom Leuchtturm am Fort\u00edn aus beobachten k\u00f6nnt (kostenlos, der Wahnsinn). Im Sommer sind die Wellen normal und der Strand perfekt zum Baden. Das Dorf hat zwei Ebenen: den Strand unten und Sitio oben auf der Klippe, verbunden durch eine historische Standseilbahn. Oben auf der Klippe steht ihr am Rand und der Blick runter ist schwindelerregend. Seafood hier ist das g\u00fcnstigste in ganz Portugal \u2013 Men\u00fa do Dia ab 7\u20ac. Parkt den Van oben am Sitio-Parkplatz, da ist mehr Platz und die Restaurants sind billiger als unten am Strand.',
 };
 
+const PARK_IBERIA = {
+'home-ib': '',
+'bordeaux': 'P+R-Parkplatz am Stadtrand (ab 3€/Tag), Tram ins Zentrum. Im Zentrum Parken unmöglich.',
+'porto': 'Am besten oben bei der Uni oder in Matosinhos am Stadtstrand parken. Unten an der Ribeira wird abgezockt und ist eng.',
+'douro-valley': 'Wild oben auf den Hügeln mit Blick übers Tal stehen — kaum Kontrollen, einer der krassesten Freisteh-Spots Portugals.',
+'serra-estrela': 'Komplett frei auf den Berghöhen stehen — nachts allein unter der Milchstraße. Kaum andere Vans, kaum Kontrollen.',
+'peniche': 'Großer Parkplatz am Leuchtturm (Cabo Carvoeiro) — bekannter Vanlife-Treffpunkt, viele Surfer stehen dort über Nacht.',
+'berlengas': 'Kein Van auf der Insel möglich — Fähre ab Peniche. Van am Hafen-Parkplatz in Peniche abstellen.',
+'ericeira': 'Klippen-Parkplätze oberhalb der Strände — Vanlife-Community, Surfer stehen dort regelmäßig über Nacht.',
+'sintra': 'Van oben am Cabo da Roca oder auf Parkplätzen außerhalb parken. Sintra-Zentrum ist eng und im Sommer komplett verstopft.',
+'lisbon': 'Van am Stadtrand (Campingplatz Lissabon oder Belém), Metro nehmen. Im Zentrum unmöglich.',
+'comporta': 'Zwischen den Dünen stehen Surfer und Vanlifer — wird noch toleriert, aber vorher checken ob aktuell kontrolliert wird.',
+'aljezur': 'Costa Vicentina wird streng kontrolliert — günstige Campingplätze ab 10€ nutzen oder bei Locals fragen. Nicht wild am Strand stehen.',
+'carrapateira': 'Parkplätze oberhalb von Amado Beach und Bordeira — beliebte Vanlife-Spots, Klippen-Freistehen wird zunehmend kontrolliert.',
+'sagres': 'Parkplatz am Cabo de São Vicente — abends sammeln sich Vans für Sonnenuntergang, Übernachtung wird toleriert.',
+'lagos': 'Van-Parkplätze etwas außerhalb der Stadt (z.B. am Meia Praia), Altstadt zu Fuß erreichbar. Im Zentrum keine Chance.',
+'benagil': 'Oben am Klippenrand parken und runter zum Strand laufen. Parkplatz direkt an der Praia de Benagil ist klein — früh kommen.',
+'tarifa': 'Strandparkplätze draußen an der N-340 Richtung Punta Paloma — Vanlife-Szene, Übernachtung geduldet. In der Stadt ist es eng.',
+'bolonia': 'Parkplatz direkt am Strand bei der Düne — kleiner Ort, entspannt, Übernachtung wird oft toleriert.',
+'ronda': 'Van unten am Parkplatz Padre Jesús abstellen und hochlaufen — oben in der Stadt gibt es keine Parkchance.',
+'caminito-del-rey': 'Parkplatz am Nordeingang des Caminito — Shuttle zum Südeingang inklusive. Vorher Tickets online buchen.',
+'nerja': 'Oben parken und zu den Buchten von Maro runterlaufen. An den Klippen oberhalb gibt es Freisteher-Spots mit Meerblick.',
+'cabo-de-gata': 'Naturpark — Wild Campen wird kontrolliert, aber günstige Campingplätze ab 8€. Stellplätze bei San José und Las Negras.',
+'granada': 'Van außerhalb parken und Bus nehmen. P+R bei Paseo del Violón oder Campingplatz Reina Isabel.',
+'seville': 'Alamillo-Park: kostenlos, schattig, ruhig. Von dort Bus oder Rad ins Zentrum. In der Altstadt null Chance mit dem Van.',
+'mundaka': 'Van-Stellplätze etwas oberhalb am Ortsrand. Das Dorf ist klein — morgens den Platz checken.',
+'san-sebastian': 'Van außerhalb parken und Bus nehmen — in der Stadt unmöglich. P+R oder Campingplatz Igueldo.',
+'gaztelugatxe': 'Großer Parkplatz unten am Fuß der Treppe — van-freundlich, aber im Sommer schnell voll. Früh kommen.',
+'picos-de-europa': 'Wildes Campen im Nationalpark verboten — aber drumherum in den Tälern tolle Freisteh-Spots. Torla hat einen guten Parkplatz.',
+'llanes': 'Hafen-Parkplatz oder am Ortsrand stehen. Ruhiges Fischerdorf, Übernachtung wird meistens toleriert.',
+'catedrales': 'Großer Parkplatz direkt oben am Strand — van-freundlich, Übernachtung oft toleriert. Im Sommer online reservieren (kostenlos).',
+'islas-cies': 'Kein Van auf der Insel — Fähre ab Vigo. Van in Vigo am Hafen-Parkplatz abstellen.',
+'combarro': 'Van auf dem Parkplatz außerhalb des Dorfes lassen — Gassen viel zu eng. Von dort 5 Minuten zu Fuß.',
+'bardenas-reales': 'Übernachtung im Park verboten — direkt am Parkrand gibt es Stellplätze. Rundroute durch den Park ist Schotterpiste, aber machbar.',
+'ordesa': 'Van in Torla am Parkplatz abstellen. Im Sommer ab 9 Uhr Zufahrt zum Nationalpark gesperrt — Shuttlebus nehmen.',
+'mont-rebei': 'Anfahrt über Schotterpiste — Parkplatz am Schluchteingang. Abgelegener Spot, wenig Kontrolle, Übernachtung oft möglich.',
+'barcelona': 'Van am Stadtrand (Campingplatz oder P+R), Metro nehmen. Im Zentrum unmöglich.',
+'tossa-de-mar': 'Parkplätze für Vans am Ortsrand, von dort 10 Minuten zu Fuß ins Zentrum und zum Strand.',
+'cadaques': 'Anfahrt über kurvigen Pass — Parkplatz am Ortseingang nutzen. Im Dorf selbst sehr eng, kein Platz für Vans.',
+'montserrat': 'Van unten am Bahnhof parken und Zahnradbahn nach oben nehmen. Straße hoch ist eng und verstopft.',
+'siurana': 'Abenteuerliche Bergstraße hoch — oben kleiner Parkplatz am Dorf, Übernachtung wird meistens toleriert. Wenig Leute, sehr ruhig.',
+'salamanca': 'Kostenlose Parkplätze am Fluss (Tormes) oder Paseo Fluvial. Von dort 10 Minuten in die Altstadt.',
+'madrid': 'Van am Stadtrand bei einer Metro-Station parken. Im Zentrum keine Chance — Umweltzone + null Parkplätze.',
+'valencia': 'Großer kostenloser Parkplatz am Hafen (Marina) — van-freundlich. Von dort Bus oder Rad ins Zentrum.',
+'la-herradura': 'Van am östlichen Ende der Bucht beim Cerro Gordo parken. Ruhig, kostenlos, nah an den Klippenspots.',
+'alquezar': 'Van unten am großen Parkplatz abstellen und ins Dorf hochlaufen. Oben kein Platz für Vans.',
+'zahara-atunes': 'Direkt am Strand parken — entspannt, kaum Kontrollen, Übernachtung wird geduldet. Vanlife-freundlich.',
+'sopelana': 'Parkplatz oben an den Klippen bei La Salvaje — inoffizieller Vanlife-Treffpunkt. Abends Bier auf den Klippen mit Surfern.',
+'burgau': 'Stellplätze auf den Klippen zwischen Burgau und Sagres — Sonnenuntergang direkt vom Van. Lagos 10 Min für Einkauf.',
+'sitges': 'Parkplatz außerhalb am Strand, Altstadt ist Fußgängerzone. Alternativ Barcelona per Zug (30 Min).',
+'el-rocio': 'Sandparkplätze am Dorfrand — alles in El Rocío ist Sand. Entspannt, Übernachtung kein Problem.',
+'nazare': 'Oben am Sítio-Parkplatz stehen — mehr Platz als unten, Restaurants billiger, Klippen-Aussicht gratis dazu.',
+};
+
 const ROUTES_IBERIA = [
   { name:'Andalusien Klassiker', sub:'~4200km \u00b7 11 Stops',
     desc:'Der Spanien-Einstieg: Sevilla, Granada, Ronda und die gesamte S\u00fdk\u00fcste von Tarifa bis Cabo de Gata. Tapas, Flamenco und T\u00fcrkiswasser.',
@@ -1987,7 +2116,7 @@ const NARRATIVE_IBERIA = {
   5: 'Drei Wochen, ein ganzes Land (plus Lissabon als Bonus), und jeder einzelne Tag ein anderes Abenteuer \u2013 das ist die Route f\u00fcr alle, die sagen: Wenn schon Spanien, dann ALLES! Barcelona knallt zum Auftakt rein: Gaud\u00eds Sagrada Fam\u00edlia, Tapas an der Boqueria, Nachtleben in El Born bis die Sonne aufgeht, und morgens mit Churros am Strand wieder zu sich kommen. Cadaqu\u00e9s ist Dal\u00eds magisches Fischerdorf am Cap de Creus, wo die Felsen aussehen wie seine geschmolzenen Uhren. In Ordesa wandert ihr durch den Grand Canyon der Pyren\u00e4en \u2013 Wasserfall am Ende, Geier \u00fcber euch, Stille die in den Ohren dr\u00f6hnt. San Sebasti\u00e1n liefert die besten Pintxos der Welt: ihr zieht von Bar zu Bar, jeder Bissen ist Kunst f\u00fcr 2\u20ac, und an der Concha-Bucht schwimmt ihr in der sch\u00f6nsten Stadtbucht Europas. Die Picos de Europa werden wild: Cares-Schlucht mit t\u00fcrkisem Fluss unter 1000-Meter-W\u00e4nden, K\u00fche auf der Stra\u00dfe, und abends Sidra mit den Einheimischen. In Llanes checkt ihr wilde Buchten ab die kein Tourist kennt, und Combarros H\u00f3rreos am Wasser sind das fotogenste Fischerdorf Galiciens \u2013 Pulpo und Albari\u00f1o-Wein f\u00fcr den Bruchteil dessen, was ihr zu Hause zahlt. Kurzer Schwenk nach Lissabon: Past\u00e9is de Bel\u00e9m warm aus dem Ofen, Tram 28 durch Alfama, Bairro Alto wo die Nacht zur Stra\u00dfenparty wird \u2013 ihr werdet es nicht bereuen, diesen Abstecher gemacht zu haben! Dann runter nach Tarifa: Kitesurfen mit der K\u00fcste Afrikas am Horizont, abends Thunfisch-Tartar und ein Sundowner am Strand. Granadas Gratis-Tapas-Kultur ist legend\u00e4r \u2013 bestellt ein Bier, bekommt Essen gratis, zieht weiter zur n\u00e4chsten Bar, wiederholt. Sevillas Hitze br\u00e4t euch bei 42 Grad, aber genau das geh\u00f6rt dazu: Flamenco in Triana mit Schwei\u00dfperlen auf der Stirn, Tapas unter Orangenb\u00e4umen, die Plaza de Espa\u00f1a im Abendlicht. Rondas 100-Meter-Schlucht mitten in der Stadt haut euch nochmal um, bevor Valencia als letzter Stopp Paella am Strand und futuristische Architektur zum Abschied serviert. Der Van rollt nach Hause, ihr seid braun, satt und voller Geschichten \u2013 das war die eine Reise, die alles hatte!',
 };
 
-const TRIP_IBERIA = { S: S_IBERIA, FOOD: FOOD_IBERIA, GUIDE: GUIDE_IBERIA, WILDLIFE: WILDLIFE_IBERIA, ROUTES: ROUTES_IBERIA, ROUTE_NARRATIVE: NARRATIVE_IBERIA,
+const TRIP_IBERIA = { S: S_IBERIA, FOOD: FOOD_IBERIA, GUIDE: GUIDE_IBERIA, WILDLIFE: WILDLIFE_IBERIA, PARK: PARK_IBERIA, ROUTES: ROUTES_IBERIA, ROUTE_NARRATIVE: NARRATIVE_IBERIA,
   name:'Spanien 2026 \u00b7 Jungs-Trip', sub:'ES (+PT) | 3 Wochen ab 12.08.',
   center:[-4,39.5], zoom:5.2, homeId:'home-ib' };
 
@@ -2137,7 +2266,7 @@ function switchTrip(tripId) {
   const t = TRIPS[tripId];
   if (!t) return;
   activeTrip = tripId;
-  S = t.S; FOOD = t.FOOD; GUIDE = t.GUIDE; WILDLIFE = t.WILDLIFE || {}; ROUTES = t.ROUTES; ROUTE_NARRATIVE = t.ROUTE_NARRATIVE;
+  S = t.S; FOOD = t.FOOD; GUIDE = t.GUIDE; WILDLIFE = t.WILDLIFE || {}; PARK = t.PARK || {}; ROUTES = t.ROUTES; ROUTE_NARRATIVE = t.ROUTE_NARRATIVE;
   sel = []; localStorage.setItem('vt-sel','[]'); activeRouteIdx = -1; localStorage.setItem('vt-routeIdx','-1');
   filt = new Set(Object.keys(CAT));
   renderPersonBar();
@@ -2472,7 +2601,7 @@ function renderList() {
         <div class="gs-metrics">${metrics.map(m => `<span>${m}</span>`).join('')}</div>
         <div class="gs-body">${GUIDE[s.id] || s.d}</div>
         <div class="gs-why">\u{1F4A1} ${s.w}</div>
-        ${wcHtml}${WILDLIFE[s.id] ? `<div class="gs-section" style="background:#ecfdf5;border-radius:6px;margin:4px 10px;border:1px solid #a7f3d0"><div class="gs-section-title">\u{1F33F} Tier- & Pflanzenwelt</div><p style="color:#064e3b">${WILDLIFE[s.id]}</p></div>` : ''}${spotTipsHtml(s)}${foodHtml}${tagsHtml}
+        ${wcHtml}${WILDLIFE[s.id] ? `<div class="gs-section" style="background:#ecfdf5;border-radius:6px;margin:4px 10px;border:1px solid #a7f3d0"><div class="gs-section-title">\u{1F33F} Tier- & Pflanzenwelt</div><p style="color:#064e3b">${WILDLIFE[s.id]}</p></div>` : ''}${spotTipsHtml(s)}${PARK[s.id] ? `<div class="gs-section" style="background:#eff6ff;border-radius:6px;margin:4px 10px;border:1px solid #bfdbfe"><div class="gs-section-title">\u{1F17F}\uFE0F \u00dcbernachtung / Stellplatz</div><p style="color:#1e3a5f">${PARK[s.id]}</p></div>` : ''}${foodHtml}${tagsHtml}
         <div class="gs-actions" onclick="event.stopPropagation()">
           <button class="ab ab2" onclick="mv('${s.id}',-1)">\u25B2 Hoch</button>
           <button class="ab ab2" onclick="mv('${s.id}',1)">\u25BC Runter</button>
