@@ -1602,6 +1602,7 @@ function showInfoCard(s, x, y, pin) {
   const tagsHtml = s.t.map(t => `<span style="display:inline-block;font-size:9px;padding:1px 6px;border-radius:8px;background:#f3f4f6;color:#4b5563;margin:1px 2px">${t}</span>`).join('');
   const navBtn = `<div class="pgmap-btns">
     <a class="pgmap-btn" href="https://www.google.com/maps/dir//${s.lat},${s.lng}" target="_blank">\u{1F697} Navigation</a>
+    <a class="pgmap-btn" href="https://park4night.com/map#lat=${s.lat}&lng=${s.lng}&zoom=12" target="_blank">\u{1F6D7} Stellpl\u00e4tze</a>
   </div>`;
   const btnCls = on ? 'pbtn pbtn-rm' : 'pbtn pbtn-add';
   const btnTxt = on ? '\u2715 Von Route entfernen' : '\u2713 Zur Route hinzufügen';
