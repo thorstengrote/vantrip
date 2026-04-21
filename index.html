@@ -1494,6 +1494,93 @@ function spotTipsHtml(s) {
   </div>`;
 }
 
+function routePackingList() {
+  const spots = sel.map(id => S.find(s=>s.id===id)).filter(s => s && s.cat !== 'home');
+  if (!spots.length) return '';
+
+  // Collect all tips from all spots, deduplicate by text
+  const allTips = new Map();
+  for (const s of spots) {
+    for (const t of spotTips(s)) {
+      if (!allTips.has(t.text)) allTips.set(t.text, {...t, spots:[]});
+      allTips.get(t.text).spots.push(s.n);
+    }
+  }
+
+  // Categorize
+  const cats = {
+    med: {icon:'\u{1F3E5}', label:'Medizin & Apotheke (vorher besorgen!)', items:[]},
+    gear: {icon:'\u{1F392}', label:'Ausr\u00fcstung & Kleidung', items:[]},
+    tech: {icon:'\u{1F4F1}', label:'Technik & Navigation', items:[]},
+    docs: {icon:'\u{1F4CB}', label:'Dokumente & Versicherung', items:[]},
+    vehicle: {icon:'\u{1F699}', label:'Fahrzeug', items:[]},
+    safety: {icon:'\u26A0\uFE0F', label:'Sicherheit & Verhalten', items:[]},
+  };
+
+  // Route-level tips (always)
+  cats.med.items.push('Erste-Hilfe-Set (Verb\u00e4nde, Pflaster, Schere, Pinzette)');
+  cats.med.items.push('Ibuprofen + Paracetamol + Buscopan (Bauchkr\u00e4mpfe)');
+  cats.med.items.push('Loperamid (Durchfall) + Elektrolyte-Pulver');
+  cats.med.items.push('Antihistamin Tabletten + Gel (Insektenstiche, Allergien)');
+  cats.med.items.push('Sonnencreme 50+ und After-Sun');
+  cats.med.items.push('Wund-Desinfektionsmittel (Octenisept)');
+  cats.med.items.push('Blasenpflaster');
+  cats.docs.items.push('EU-Krankenversicherungskarte (EHIC)');
+  cats.docs.items.push('Auslandskrankenversicherung mit R\u00fccktransport');
+  cats.docs.items.push('Gr\u00fcne Versicherungskarte f\u00fcrs Fahrzeug');
+  cats.docs.items.push('Kopien aller Dokumente digital (Cloud + Offline)');
+  cats.vehicle.items.push('Abschleppseil + Starthilfekabel');
+  cats.vehicle.items.push('Reifenreparatur-Set + 12V Kompressor');
+  cats.vehicle.items.push('Reservekanister (mind. 5L)');
+  cats.vehicle.items.push('Motor\u00f6l 1L Nachf\u00fcll');
+
+  // Check for Kosovo on route
+  if (spots.some(s => (s.co||'').includes('XK'))) cats.docs.items.push('Kosovo: KFZ-Versicherung pr\u00fcfen (manche gelten dort NICHT)');
+
+  // Distribute spot tips into categories
+  for (const [text, tip] of allTips) {
+    const t = text.toLowerCase();
+    if (t.includes('b\u00e4r') || t.includes('spray')) { cats.safety.items.push(tip.icon+' '+text); }
+    else if (t.includes('zecken') || t.includes('seeigel') || t.includes('galeere') || t.includes('viper') || t.includes('badeschuh')) { cats.med.items.push(tip.icon+' '+text); }
+    else if (t.includes('offline') || t.includes('powerbank') || t.includes('netz') || t.includes('karten')) { cats.tech.items.push(tip.icon+' '+text); }
+    else if (t.includes('jacke') || t.includes('kleidung') || t.includes('schuhwerk') || t.includes('neopren') || t.includes('h\u00f6he') || t.includes('warm') || t.includes('sonnencreme') || t.includes('hut')) { cats.gear.items.push(tip.icon+' '+text); }
+    else if (t.includes('proviant') || t.includes('wasser') || t.includes('m\u00fcll')) { cats.gear.items.push(tip.icon+' '+text); }
+    else if (t.includes('schotter') || t.includes('reifendruck')) { cats.vehicle.items.push(tip.icon+' '+text); }
+    else if (t.includes('klippenspring') || t.includes('nie allein') || t.includes('str\u00f6mung')) { cats.safety.items.push(tip.icon+' '+text); }
+    else { cats.safety.items.push(tip.icon+' '+text); }
+  }
+
+  // Deduplicate within each category
+  for (const c of Object.values(cats)) c.items = [...new Set(c.items)];
+
+  let html = '';
+  for (const [key, c] of Object.entries(cats)) {
+    if (!c.items.length) continue;
+    html += `<div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#1a1a2e;margin-bottom:4px">${c.icon} ${c.label}</div>
+      ${c.items.map(item => `<div style="font-size:11px;line-height:1.5;color:#374151;padding:1px 0">\u2610 ${item}</div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function showPackingList() {
+  const content = routePackingList();
+  if (!content) return;
+  document.getElementById('person-modal').innerHTML = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.parentElement.style.display='none'">
+      <div style="background:#fff;border-radius:16px;padding:20px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:16px;font-weight:700;color:#1a1a2e">\u{1F392} Packliste f\u00fcr diese Route</div>
+          <button onclick="document.getElementById('person-modal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af">&times;</button>
+        </div>
+        <div style="font-size:10px;color:#6b7280;margin-bottom:12px">Basierend auf ${sel.length-2} Spots. Checkboxen sind nicht speicherbar.</div>
+        ${content}
+      </div>
+    </div>`;
+  document.getElementById('person-modal').style.display = 'block';
+}
+
 function showInfoCard(s, x, y, pin) {
   clearTimeout(icHideTimer);
   if (pin) icPinned = true;
@@ -2294,7 +2381,10 @@ function renderList() {
       const guideText = (typeof ROUTE_GUIDE !== 'undefined' && ROUTE_GUIDE[activeRouteIdx]) || ROUTE_NARRATIVE[activeRouteIdx] || '';
       if (guideText) {
         h += `<div style="padding:16px;background:linear-gradient(135deg,#fef2f2,#fff);border-bottom:2px solid #d63050">
-          <div style="font-size:14px;font-weight:700;color:#d63050;margin-bottom:8px">\u{1F697} ${ROUTES[activeRouteIdx]?.name || 'Eure Route'}</div>
+          <div style="font-size:14px;font-weight:700;color:#d63050;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+            <span style="flex:1">\u{1F697} ${ROUTES[activeRouteIdx]?.name || 'Eure Route'}</span>
+            <button onclick="showPackingList()" style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;color:#9a3412;white-space:nowrap" title="Packliste f\u00fcr diese Route">\u{1F392} Packliste</button>
+          </div>
           <div style="font-size:12px;line-height:1.7;color:#374151">${highlightSpotNames(guideText)}</div>
         </div>`;
       }
